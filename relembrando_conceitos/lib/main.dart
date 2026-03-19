@@ -1,16 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:curso1/pages/home.dart';
+import 'package:curso1/pages/profile.dart';
+import 'package:curso1/pages/settings.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp( MyApp());
 }
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+   MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
   final bool isDarkMode = false;
+
+  int pageIndex = 0;
+
+  final List pages = [
+    HomePage(),
+    Profile(),
+    Settings(),
+  ];
+
+  void onPageChanged(int index){
+    setState(() {
+      pageIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-     void ontap(int valor){
-      print('Container $valor clicado');
-    } 
+  
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
@@ -30,27 +52,28 @@ class MyApp extends StatelessWidget {
           SizedBox(width: 10),
         ],
       ),
-
-        body: Center(
-          child: ListView.builder(
-            itemCount: 11,
-            scrollDirection: Axis.vertical,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () => ontap(index),
-                child: Container(
-                  height: 300,
-                  margin: EdgeInsets.all(5),
-                  color: Colors.grey[300]!.withValues(alpha:0.5),
-                  child: Center(
-                    child: Text('Container numero $index'),
-                  ),
-                ),
-              );
-            },
-            
-          ),
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: Colors.lightGreenAccent,
+          elevation: 1,
+          currentIndex: pageIndex,
+          selectedItemColor: Colors.black,
+          onTap: onPageChanged,
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home), 
+              label: 'Home'
+              ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person), 
+              label: 'Profile'
+              ),
+              BottomNavigationBarItem(
+              icon: Icon(Icons.settings), 
+              label: 'Settings'
+              ),
+          ]
         ),
+        body: pages[pageIndex],
       ),
     );
   }
