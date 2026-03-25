@@ -48,58 +48,53 @@ class _HomePageState extends State<HomePage> {
             Column(
               children: [
                 Theme(
-              data: Theme.of(context).copyWith( // precisa disso para remover divider branco hard coded no DrawerHeader
-                dividerTheme: const DividerThemeData(color: Colors.transparent),
-              ),
-              child: DrawerHeader(
-                decoration: BoxDecoration(color: SysColors.darkBackgroundColor),
-                child: Image.asset('lib/images/logo.png'),
-              ),
+                  data: Theme.of(context).copyWith(
+                    // precisa disso para remover divider branco hard coded no DrawerHeader
+                    dividerTheme: const DividerThemeData(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                  child: DrawerHeader(
+                    decoration: BoxDecoration(
+                      color: SysColors.darkBackgroundColor,
+                    ),
+                    child: Image.asset('lib/images/logo.png'),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 25.0),
+                  child: Divider(color: SysColors.darkGrey),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: ListTile(
+                    leading: Icon(Icons.home, color: SysColors.primaryColor),
+                    title: Text(
+                      'Home',
+                      style: TextStyle(color: SysColors.primaryColor),
+                    ),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: ListTile(
+                    leading: Icon(Icons.info, color: SysColors.primaryColor),
+                    title: Text(
+                      'About',
+                      style: TextStyle(color: SysColors.primaryColor),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 25.0),
-              child: Divider(color: SysColors.darkGrey),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.only(left: 20.0),
-              child: ListTile(
-                leading: Icon(
-                  Icons.home,
-                  color: SysColors.primaryColor,
-                ),
-                title: Text(
-                  'Home',
-                  style: TextStyle(color: SysColors.primaryColor),
-                ),
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.only(left: 20.0),
-              child: ListTile(
-                leading: Icon(
-                  Icons.info,
-                  color: SysColors.primaryColor,
-                ),
-                title: Text(
-                  'About',
-                  style: TextStyle(color: SysColors.primaryColor),
-                ),
-              ),
-            )
-
-              ]),
-            
             Padding(
               padding: const EdgeInsets.only(left: 20.0, bottom: 50.0),
               child: ListTile(
-                leading: Icon(
-                  Icons.logout,
-                  color: SysColors.primaryColor,
-                ),
+                leading: Icon(Icons.logout, color: SysColors.primaryColor),
                 title: Text(
                   'Logout',
                   style: TextStyle(color: SysColors.primaryColor),
