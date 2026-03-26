@@ -1,4 +1,4 @@
-Aprendendo atraves das seguintes referencias:
+Aprendendo através das seguintes referências:
 
 https://www.reddit.com/r/dartlang/comments/12rhny2/self_learners_which_materials_did_you_use_to/
 
