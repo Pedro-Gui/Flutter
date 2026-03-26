@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:notes/models/note_database.dart';
 import 'package:notes/pages/notes_page.dart';
+import 'package:notes/routes/routes.dart';
 import 'package:notes/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -28,6 +29,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: NotesPage(),
       theme: Provider.of<ThemeProvider>(context).themeData,
+      routes: Routes.routes.map((key, value) => MapEntry(key, (context) => value),),
     );
   }
 }

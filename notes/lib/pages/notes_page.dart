@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notes/components/my_drawer.dart';
 import 'package:notes/models/note.dart';
 import 'package:notes/models/note_database.dart';
 import 'package:provider/provider.dart';
@@ -31,12 +32,22 @@ class _NotesPageState extends State<NotesPage> {
         content: TextField(controller: textController),
         actions: [
           MaterialButton(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onPressed: () {
+              textController.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          MaterialButton(
+            color: Theme.of(context).colorScheme.inversePrimary,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onPressed: () {
               context.read<NoteDatabase>().addNote(textController.text);
               textController.clear();
               Navigator.pop(context);
             },
-            child: const Text('Create'),
+            child: Text('Create', style: TextStyle(color: Theme.of(context).colorScheme.primary),),
           ),
         ],
       ),
@@ -46,22 +57,33 @@ class _NotesPageState extends State<NotesPage> {
   void updateNote(Note note) {
     textController.text = note.text;
     showDialog(
-      context: context, 
+      context: context,
       builder: (context) => AlertDialog(
         title: Text('Update note'),
         content: TextField(controller: textController),
         actions: [
-          MaterialButton
-          (onPressed: (){
-            context.read<NoteDatabase>().updateNote(note.id, textController.text);
-            textController.clear();
-            Navigator.pop(context);
-          },
-          child: const Text('Update'),
-          )
+          MaterialButton(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onPressed: () {
+              textController.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          MaterialButton(
+            onPressed: () {
+              context.read<NoteDatabase>().updateNote(
+                note.id,
+                textController.text,
+              );
+              textController.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('Update'),
+          ),
         ],
-        
-      ));
+      ),
+    );
   }
 
   void deleteNote(int id) {
@@ -79,15 +101,17 @@ class _NotesPageState extends State<NotesPage> {
         title: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Text(
-            'Notes', 
+            'Notes',
             style: GoogleFonts.dmSerifText(
               fontSize: 48,
-             // fontWeight: FontWeight.bold,
+              // fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.inversePrimary,
-            )
             ),
-        )
           ),
+        ),
+      ),
+
+      drawer: MyDrawer(),
 
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -102,17 +126,23 @@ class _NotesPageState extends State<NotesPage> {
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary,
-              borderRadius: BorderRadius.all(Radius.circular(12))
-              ),
-            margin: EdgeInsets.only(left: 20, right: 5, top: 15),
-            padding: EdgeInsets.all(12),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+            margin: EdgeInsets.only(left: 20, right: 12, top: 15),
+            padding: EdgeInsets.only(left: 12, top: 12, bottom: 12),
             child: ListTile(
               title: Text(note.text),
               trailing: Row(
-                mainAxisSize: MainAxisSize.min, 
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(onPressed:() => updateNote(note), icon: Icon(Icons.edit)),
-                  IconButton(onPressed:() => deleteNote(note.id), icon: Icon(Icons.delete)),
+                  IconButton(
+                    onPressed: () => updateNote(note),
+                    icon: Icon(Icons.edit),
+                  ),
+                  IconButton(
+                    onPressed: () => deleteNote(note.id),
+                    icon: Icon(Icons.delete),
+                  ),
                 ],
               ),
             ),
