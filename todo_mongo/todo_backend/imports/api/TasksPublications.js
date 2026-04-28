@@ -7,18 +7,19 @@ Meteor.publish({
     if (!userId) {
       return this.ready();
     }
-
+ 
     return TodoCollection.find({
       $or: [
         { privado: false },
         { userId: userId }
       ],
-      ...(hideCompleted ? { situacao: { $ne: "Concluída" } } : {}),
+      ...(hideCompleted ? { situacao: { $ne: "concluido" } } : {}),
       ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
     }, {
-      ...(pagina !=null ? { limit: 4, skip: (pagina-1)*4 } : {}),  
+      //...(pagina !=null ? { limit: 4, skip: (pagina-1)*4 } : {}),  
     });
   },
+
   "task"(taskId) {
     if (!this.userId) {
       return this.ready();

@@ -21,7 +21,27 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: lightMode,
       darkTheme: darkMode,
-      home: AuthPage(),
+      home: const AuthPage(),
+      initialRoute: '/loginOrRegisterPage',
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/loginOrRegisterPage':
+          case '/homePage':
+            return MaterialPageRoute(
+              builder: (context) => const AuthPage(),
+            );
+          case '/profilePage':
+            return MaterialPageRoute(
+              builder: (context) => const AuthPage(page: '/profilePage'),
+            );
+          case '/createOrEditPage':
+            final args = (settings.arguments as Map<String, dynamic>?) ?? {};
+            return MaterialPageRoute(
+              builder: (context) => AuthPage(page: '/createOrEditPage', args: args),
+            );
+          default:
+            return MaterialPageRoute(builder: (context) => const AuthPage(page: '/loginOrRegisterPage'));
+        }}
     );
   }
 }

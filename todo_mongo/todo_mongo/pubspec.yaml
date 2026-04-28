@@ -10,6 +10,7 @@ dependencies:
   dart_meteor: ^3.0.0
   flutter:
     sdk: flutter
+  flutter_slidable: ^4.0.3
   google_fonts: ^8.0.2
   google_sign_in: ^7.2.0
   provider: ^6.1.5+1

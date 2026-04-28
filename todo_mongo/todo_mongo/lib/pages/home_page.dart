@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_mongo/components/my_drawer.dart';
+import 'package:todo_mongo/components/todo_tile.dart';
 import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/task_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,67 +14,20 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  TextEditingController taskController = TextEditingController();
   MongoService? mongoService;
 
-  void editOrAdd(bool isedit, dynamic task, BuildContext context){
-    if(isedit){
-      taskController.text = task['title'];
-    }else{
-      taskController.clear();
-    }
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isedit ? 'Edit task' : 'New task'),
-        content: TextField(controller: taskController),
-        actions: [
-          MaterialButton(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            onPressed: () {
-              taskController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          MaterialButton(
-            color: Theme.of(context).colorScheme.inversePrimary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            onPressed: () {
-              final taskText = taskController.text.trim();
-
-              if (taskText.isEmpty) return;
-
-              if (isedit) {
-                mongoService!.updateTask(task['_id'], taskText);
-              } else {
-                mongoService!.addTask(taskText);
-              }
-
-              taskController.clear();
-              Navigator.pop(context);
-            },
-            child: Text(isedit?'Update':'Create', style: TextStyle(color: Theme.of(context).colorScheme.primary),),
-          ),
-        ],
-      ),
-    );
+  void editOrAdd(bool isEdit, Task? task, BuildContext context) {
+    Navigator.pushNamed(
+          context,
+          '/createOrEditPage',
+          arguments: {'isEdit': isEdit, 'task': task},
+        );
   }
-  Icon getIcon(String situacao){
-    switch (situacao) {
-      case 'concluido':
-        return Icon(Icons.check_circle_outline, color: Colors.green);
-      case 'emAndamento':
-        return Icon(Icons.check_circle_outline, color: Colors.orange);
-      case 'naoConcluido':
-        return Icon(Icons.remove_circle_outline_outlined, color: Colors.red);
-      default:
-        return Icon(Icons.remove_circle_outline_outlined, color: Colors.red);
-    }
-  }
+
   @override
   Widget build(BuildContext context) {
     mongoService = Provider.of<MongoService>(context, listen: false);
+    bool hideCompleted = mongoService!.hideCompleted;
 
     return Scaffold(
       appBar: AppBar(
@@ -86,32 +42,36 @@ class _HomePageState extends State<HomePage> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: () {
-              mongoService!.signOut();
-            },
-            icon: Icon(Icons.logout),
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                onTap: () {
+                  mongoService!.toggleCompleted();
+                  setState(() {
+                    hideCompleted = !hideCompleted;
+                  });
+                },
+                child: Text(
+                  hideCompleted ? 'Show Completed' : 'Hide Completed',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.inversePrimary,
+                  ),
+                ),
+              ),
+              
+            ],
           ),
         ],
       ),
-
+      drawer: const MyDrawer(),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Column(
             children: [
-              Text(
-                'MY TASKS',
-                style: GoogleFonts.montserrat(
-                  fontSize: 16,
-                  letterSpacing: 1.5,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 10),
-
               Expanded(
-                child: StreamBuilder<Map<String, dynamic>>(
+                child: StreamBuilder<List<Task>>(
                   stream: mongoService!.todoCollection,
                   builder: (context, snapshot) {
                     if (mongoService!.currentUserId == null) {
@@ -119,42 +79,38 @@ class _HomePageState extends State<HomePage> {
                         child: Text('Faça login para ver suas tarefas.'),
                       );
                     }
-
-                    if (!snapshot.hasData) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    var dados = snapshot.data!;
-                    var listaDeTarefas = dados.values.toList();
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(
+                        child: Text('Nenhuma tarefa encontrada.'),
+                      );
+                    }
 
-                    if (listaDeTarefas.isEmpty) {
+                    final List<Task> dados = snapshot.data!;
+
+                    if (dados.isEmpty) {
                       return const Center(
                         child: Text('Nenhuma tarefa encontrada no banco.'),
                       );
                     }
 
                     return ListView.builder(
-                      itemCount: listaDeTarefas.length,
+                      itemCount: dados.length,
                       itemBuilder: (context, index) {
-                        var tarefa = listaDeTarefas[index];
-                        return Card(
-                          child: ListTile(
-                            leading: IconButton(
-                              onPressed: (){mongoService!.updateSituacao(tarefa['_id'], tarefa['situacao']);},
-                              icon: getIcon(tarefa['situacao']),
-                              color: Colors.green,
-                            ),
-                            title: GestureDetector(
-                              onTap: () {
-                                editOrAdd(true, tarefa, context);
-                              },
-                              child: Text(
-                                tarefa['title'] ?? 'Tarefa sem título definido',
-                              ),
-                            ),
-                            subtitle: Text('Owner: ${tarefa['ownerUsername']}'),
-                            trailing: IconButton(onPressed: (){mongoService!.deleteTask(tarefa['_id']);}, icon: Icon(Icons.delete_outline)),
+                        final task = dados[index];
+                        return ToDoTile(
+                          taskName: task.title,
+                          situacao: task.situacao,
+                          owner: task.ownerUsername,
+                          onChanged: () => mongoService!.updateSituacao(
+                            task.id,
+                            task.situacao,
                           ),
+                          onDelete: () => mongoService!.deleteTask(task.id),
+                          onEdit: () => editOrAdd(true, task, context),
                         );
                       },
                     );
@@ -165,12 +121,13 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-    
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          editOrAdd(false,'',context);
+          editOrAdd(false, null, context);
         },
-        child: Icon(Icons.add)),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }

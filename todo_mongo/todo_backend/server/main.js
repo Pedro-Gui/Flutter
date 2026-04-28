@@ -31,21 +31,24 @@ Meteor.startup(async () => {
 
     const tarefasIniciais = [
       { title: 'Configurar servidor Meteor', 
-        ownerId: idDoUsuarioDeTeste, 
+        userId: idDoUsuarioDeTeste, 
         ownerUsername: USER_NAME, 
-        situacao: 'emAndamento', 
+        situacao: 'emAndamento',
+        privado: false, 
         createdAt: new Date(), },
 
       { title: 'Conectar Flutter via DDP', 
-        ownerId: idDoUsuarioDeTeste, 
+        userId: idDoUsuarioDeTeste, 
         ownerUsername: USER_NAME, 
         situacao: 'concluido', 
+        privado: false,
         createdAt: new Date(), },
 
       { title: 'Fazer o primeiro CRUD funcionar no mobile', 
-        ownerId: idDoUsuarioDeTeste, 
+        userId: idDoUsuarioDeTeste, 
         ownerUsername: USER_NAME, 
         situacao: 'naoConcluido', 
+        privado: true,
         createdAt: new Date(), }
     ];
 
@@ -79,6 +82,7 @@ Accounts.registerLoginHandler('googleNative', async (loginRequest) => {
 
     const email = googleData.email;
 
+
     let user = await Meteor.users.findOneAsync({ 'emails.address': email });
 
     if (!user) {
@@ -88,8 +92,8 @@ Accounts.registerLoginHandler('googleNative', async (loginRequest) => {
 
       await Meteor.users.updateAsync(userId, {
         $set: {
-          'profile.name': googleData.name,
-          'profile.picture': googleData.picture,
+          'username': googleData.name,
+          'profilePicture': googleData.picture,
           'services.google': googleData
         }
       });
