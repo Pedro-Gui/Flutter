@@ -14,17 +14,31 @@ Meteor.methods({
       createdAt: new Date(),
     });
   },
-  "tasks.toggleSituacao"({ _id, situacao }) {
+  async "tasks.toggleSituacao"({ _id, situacao }) {
+    const task = await TodoCollection.findOneAsync(_id);
+ 
+    if (!this.userId ||this.userId !== task.userId) {
+      throw new Meteor.Error("not-authorized", "Operação não autorizada.");
+    }
+
     return TodoCollection.updateAsync(_id, {
       $set: { situacao: situacao },
     });
   },
-  "tasks.delete"({ _id }) {
+  async "tasks.delete"({ _id }) {
+    const task = await TodoCollection.findOneAsync(_id);
+ 
+    if (!this.userId ||this.userId !== task.userId) {
+      throw new Meteor.Error("not-authorized", "Operação não autorizada.");
+    }
+
     return TodoCollection.removeAsync(_id);
   },
-  "tasks.edit"({ _id, doc }) {
-    if (!this.userId) {
-      throw new Meteor.Error("Not-authorized.");
+  async "tasks.edit"({ _id, doc }) {
+    const task = await TodoCollection.findOneAsync(_id);
+ 
+    if (!this.userId ||this.userId !== task.userId) {
+      throw new Meteor.Error("not-authorized", "Operação não autorizada.");
     }
 
     return TodoCollection.updateAsync(
@@ -37,6 +51,21 @@ Meteor.methods({
         }
       });
   },
+  async 'tasks.countTotal'(hideCompleted = false, search = null) {
+    const userId = this.userId;
+    if (!userId) {
+      throw new Meteor.Error('not-authorized', 'Usuário não autenticado.');
+    }
+
+    return await TodoCollection.find({
+      $or: [
+        { privado: false },
+        { userId: userId }
+      ],
+      ...(hideCompleted ? { situacao: { $ne: "concluido" } } : {}),
+      ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
+    }).countAsync();
+  }
   /* async "CreateUser"(doc) {
 
     if (!doc.email || !doc.password || !doc.username) {

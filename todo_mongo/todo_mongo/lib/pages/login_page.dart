@@ -53,17 +53,26 @@ class _LoginPageState extends State<LoginPage> {
         message = e.message.toString();
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
-  
       if (!mounted) return;
       Navigator.pop(context);
 
+      ScaffoldMessenger.of(context).clearSnackBars();
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erro de conexão. Verifique sua internet.'),
+        SnackBar(
+          content: const Text('Erro de conexão. Verifique sua internet.'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -117,7 +126,9 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Text(
                         'Forgot password ?',
-                        style: TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -133,17 +144,25 @@ class _LoginPageState extends State<LoginPage> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Divider(thickness: 0.5, color: Theme.of(context).colorScheme.primary),
+                        child: Divider(
+                          thickness: 0.5,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10.0),
                         child: Text(
                           'Or continue with',
-                          style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
                       Expanded(
-                        child: Divider(thickness: 0.5, color: Theme.of(context).colorScheme.primary),
+                        child: Divider(
+                          thickness: 0.5,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -177,7 +196,9 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     Text(
                       'Not a member?',
-                      style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 5),
                     GestureDetector(

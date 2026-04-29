@@ -14,12 +14,11 @@ Meteor.publish({
         { userId: userId }
       ],
       ...(hideCompleted ? { situacao: { $ne: "concluido" } } : {}),
-      ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
+      ...(search ? { title: { $regex: search, $options: 'i' } } : {}),
     }, {
-      //...(pagina !=null ? { limit: 4, skip: (pagina-1)*4 } : {}),  
+      ...(pagina !=null ? { limit: 6, skip: (pagina-1)*6 } : {}),  
     });
   },
-
   "task"(taskId) {
     if (!this.userId) {
       return this.ready();
@@ -28,10 +27,3 @@ Meteor.publish({
     return TodoCollection.find({ _id: taskId });
   }
 });
-
-Meteor.publish('listaTodos', function () {
-    if (!this.userId) {
-      return this.ready(); 
-    }
-    return TodoCollection.find({});
-  });

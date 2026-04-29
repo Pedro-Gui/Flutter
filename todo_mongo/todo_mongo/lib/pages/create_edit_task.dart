@@ -1,3 +1,4 @@
+import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -78,7 +79,29 @@ class _CreateEditTaskState extends State<CreateEditTask> {
       context,
       listen: false,
     );
-    
+    void showError(MeteorError e, BuildContext context) {
+      String message = 'Ocorreu um erro inesperado.';
+
+      final errorCode = e.error?.toLowerCase() ?? '';
+      if (errorCode.contains('not-authorized')) {
+        message = 'Você não tem permissão para alterar ou apagar esta tarefa.';
+      } else if (e.reason != null && e.reason!.isNotEmpty) {
+        message = e.reason!;
+      } else {
+        message = e.message.toString();
+      }
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
     void editOrAdd(BuildContext context) {
       showDialog(
         context: context,
@@ -99,7 +122,7 @@ class _CreateEditTaskState extends State<CreateEditTask> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              onPressed: () {
+              onPressed: () async{
                 final taskText = titleController.text.trim();
                 if (taskText.isEmpty) return;
 
@@ -108,18 +131,73 @@ class _CreateEditTaskState extends State<CreateEditTask> {
                   title: taskText,
                   situacao: situacaoSelecionada,
                   privado: private,
-                  userId: widget.isEdit
-                      ? widget.task!.userId
-                      : '', 
+                  userId: widget.isEdit ? widget.task!.userId : '',
                   ownerUsername: mongoService.currentUsername ?? 'Desconhecido',
                   createdAt: widget.isEdit ? widget.task!.createdAt : null,
                 );
                 if (widget.isEdit) {
-                  mongoService.updateTask(tarefaParaSalvar);
+                  try {
+                    await mongoService.updateTask(tarefaParaSalvar);
+                  } on MeteorError catch (e) {
+                    if (!context.mounted) return;
+                    showError(e, context);
+                    Navigator.pop(context);
+                    return;
+                  }
                 } else {
-                  mongoService.addTask(tarefaParaSalvar);
+                  try {
+                    await mongoService.addTask(tarefaParaSalvar);
+                  } on MeteorError catch (e) {
+                    if (!context.mounted) return;
+                    showError(e, context);
+                    Navigator.pop(context);
+                    return;
+                  }
                 }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Confirm',
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
+    void onDelete(BuildContext context) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirm delete task ?'),
+          actions: [
+            MaterialButton(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            MaterialButton(
+              color: Theme.of(context).colorScheme.inversePrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onPressed: () async {
+                try {
+                  await mongoService.deleteTask(widget.task!.id);
+                } on MeteorError catch (e) {
+                  if (!context.mounted) return;
+                  showError(e, context);
+                  Navigator.pop(context);
+                  return;
+                }
+                if (!context.mounted) return;
                 Navigator.pop(context);
                 Navigator.pop(context);
               },
@@ -145,7 +223,12 @@ class _CreateEditTaskState extends State<CreateEditTask> {
           ),
         ),
         actions: [
-          widget.isEdit ? IconButton(onPressed: ()=>{mongoService.deleteTask(widget.task!.id), Navigator.pop(context)}, icon: const Icon(Icons.delete)) : Container()
+          widget.isEdit
+              ? IconButton(
+                  onPressed: () => onDelete(context),
+                  icon: const Icon(Icons.delete),
+                )
+              : Container(),
         ],
       ),
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -198,7 +281,6 @@ class _CreateEditTaskState extends State<CreateEditTask> {
                             ),
                             fillColor: Theme.of(context).colorScheme.secondary,
                             filled: true,
-                            // ------------------------------------
                           ),
 
                           items: getDropdownItems(),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dart_meteor/dart_meteor.dart';
+import 'package:todo_mongo/services/filter_model.dart';
 import 'dart:async';
 
 import 'package:todo_mongo/services/task_model.dart';
@@ -10,8 +11,12 @@ import 'package:todo_mongo/services/user_model.dart';
 class MongoService extends ChangeNotifier {
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   late final MeteorClient _meteor;
+
   SubscriptionHandler? _tasksSubscription;
-  bool _hideCompleted = true;
+  TaskFilter _filter = TaskFilter();
+  int _totalTasks = 0;
+  int _totalPages = 1;
+  final int _itemsPerPage = 6;
 
   MongoService() {
     _meteor = MeteorClient.connect(url: 'ws://10.0.2.2:3000/websocket');
@@ -40,14 +45,16 @@ class MongoService extends ChangeNotifier {
 
   Stream<List<Task>> get todoCollection {
     return _meteor.collection('TODO').map((mapaDaColecao) {
-      final documentos = mapaDaColecao.values;
-      return documentos.map((doc) {
+      final docs = mapaDaColecao.values;
+      return docs.map((doc) {
         return Task.fromMap(doc as Map<String, dynamic>);
       }).toList();
     });
   }
 
-  bool get hideCompleted => _hideCompleted;
+  TaskFilter get filter => _filter;
+  int get totalPages => _totalPages;
+
   // AUTH functions
   Future<bool> signInWithGoogle() async {
     try {
@@ -106,8 +113,8 @@ class MongoService extends ChangeNotifier {
         'googleNative': {'idToken': idToken},
       });
 
-      _tasksSubscription = _meteor.subscribe('tasks', args: [_hideCompleted]);
-
+      updateSubscribe();
+      notifyListeners();
       return true;
     } catch (e) {
       //print("Erro no Google Sign-In com Meteor: $e");
@@ -118,7 +125,7 @@ class MongoService extends ChangeNotifier {
   Future<void> loginWithEmail(String email, String password) async {
     try {
       await _meteor.loginWithPassword(email, password);
-      _tasksSubscription = _meteor.subscribe('tasks', args: [_hideCompleted]);
+      updateSubscribe();
       notifyListeners();
     } catch (e) {
       rethrow;
@@ -162,12 +169,31 @@ class MongoService extends ChangeNotifier {
   }
 
   // CRUD functions
+  Future<void> _fetchTotalPages() async {
+    try {
+      final total = await _meteor.call(
+        'tasks.countTotal',
+        args: [_filter.hideCompleted, _filter.search],
+      );
+
+      _totalTasks = (total as num).toInt();
+      _totalPages = (_totalTasks / _itemsPerPage).ceil();
+      if (_totalPages == 0) _totalPages = 1; 
+    }catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateSubscribe() async {
+    _tasksSubscription?.stop();
+    _tasksSubscription = _meteor.subscribe('tasks', args: _filter.toArgs());
+    await _fetchTotalPages();
+  }
+
   Future<void> addTask(Task task) async {
     try {
-      await _meteor.call(
-        'tasks.insert',
-        args: [task.toMapEdit(),],
-      );
+      await _meteor.call('tasks.insert', args: [task.toMapEdit()]);
+      _fetchTotalPages();
     } catch (e) {
       rethrow;
     }
@@ -178,10 +204,7 @@ class MongoService extends ChangeNotifier {
       await _meteor.call(
         'tasks.edit',
         args: [
-          {
-            '_id': task.id,
-            'doc': task.toMapEdit(),
-          },
+          {'_id': task.id, 'doc': task.toMapEdit()},
         ],
       );
     } catch (e) {
@@ -220,15 +243,40 @@ class MongoService extends ChangeNotifier {
           {'_id': id},
         ],
       );
+      _fetchTotalPages();
     } catch (e) {
       rethrow;
     }
   }
 
-  void toggleCompleted() {
-    _hideCompleted = !_hideCompleted;
-    _tasksSubscription?.stop();
-    _tasksSubscription = _meteor.subscribe('tasks', args: [_hideCompleted]);
+  Future<void> toggleCompleted() async {
+    _filter.hideCompleted = !_filter.hideCompleted;
+    await updateSubscribe();
     notifyListeners();
+  }
+
+  void nextPage() {
+    if (_filter.pagina < 1 || _filter.pagina >= _totalPages) {
+      _filter.pagina = 1;
+      updateSubscribe();
+    } else {
+      _filter.pagina++;
+      updateSubscribe();
+    }
+  }
+
+  void previousPage() {
+    if (_filter.pagina <= 1) {
+      _filter.pagina = _totalPages; 
+    } 
+    else {
+      _filter.pagina--;
+    }
+    updateSubscribe();
+  }
+
+  void setSearch(String texto) {
+    _filter.search = texto.isEmpty ? null : texto;
+    updateSubscribe();
   }
 }
