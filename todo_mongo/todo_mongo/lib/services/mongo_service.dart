@@ -3,20 +3,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:todo_mongo/services/filter_model.dart';
 import 'dart:async';
-
 import 'package:todo_mongo/services/task_model.dart';
 import 'package:todo_mongo/services/user_model.dart';
 
 //SHA1: DF:8B:B4:48:27:61:6D:8A:A0:7D:C4:C0:30:D7:7C:87:12:0C:6D:4F
 class MongoService extends ChangeNotifier {
+  // AUTH functions
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   late final MeteorClient _meteor;
-
-  SubscriptionHandler? _tasksSubscription;
-  TaskFilter _filter = TaskFilter();
-  int _totalTasks = 0;
-  int _totalPages = 1;
-  final int _itemsPerPage = 6;
 
   MongoService() {
     _meteor = MeteorClient.connect(url: 'ws://10.0.2.2:3000/websocket');
@@ -43,19 +37,14 @@ class MongoService extends ChangeNotifier {
     return null;
   }
 
-  Stream<List<Task>> get todoCollection {
-    return _meteor.collection('TODO').map((mapaDaColecao) {
-      final docs = mapaDaColecao.values;
-      return docs.map((doc) {
-        return Task.fromMap(doc as Map<String, dynamic>);
-      }).toList();
-    });
+  Future<void> editUserProfile(Map<String, dynamic> doc) async {
+    try {
+      await _meteor.call('EditUser', args: [doc]).timeout(const Duration(seconds: 15));
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  TaskFilter get filter => _filter;
-  int get totalPages => _totalPages;
-
-  // AUTH functions
   Future<bool> signInWithGoogle() async {
     try {
       await _googleSignIn.initialize(
@@ -111,20 +100,20 @@ class MongoService extends ChangeNotifier {
 
       await _meteor.login({
         'googleNative': {'idToken': idToken},
-      });
+      }).timeout(const Duration(seconds: 5));
 
       updateSubscribe();
       notifyListeners();
       return true;
     } catch (e) {
       //print("Erro no Google Sign-In com Meteor: $e");
-      return false;
+      rethrow;
     }
   }
 
   Future<void> loginWithEmail(String email, String password) async {
     try {
-      await _meteor.loginWithPassword(email, password);
+      await _meteor.loginWithPassword(email, password).timeout(const Duration(seconds: 10));
       updateSubscribe();
       notifyListeners();
     } catch (e) {
@@ -169,6 +158,26 @@ class MongoService extends ChangeNotifier {
   }
 
   // CRUD functions
+  SubscriptionHandler? _tasksSubscription;
+  // ignore: prefer_final_fields
+  TaskFilter _filter = TaskFilter();
+  int _totalTasks = 0;
+  int _totalPages = 1;
+  final int _itemsPerPage = 6;
+
+  TaskFilter get filter => _filter;
+  int get totalPages => _totalPages;
+  Map<String, String> profilePics = {};
+
+  Stream<List<Task>> get todoCollection {
+    return _meteor.collection('TODO').map((mapaDaColecao) {
+      final docs = mapaDaColecao.values;
+      return docs.map((doc) {
+        return Task.fromMap(doc as Map<String, dynamic>);
+      }).toList();
+    });
+  }
+
   Future<void> _fetchTotalPages() async {
     try {
       final total = await _meteor.call(
@@ -185,9 +194,29 @@ class MongoService extends ChangeNotifier {
   }
 
   Future<void> updateSubscribe() async {
-    _tasksSubscription?.stop();
+    try{
+      _tasksSubscription?.stop();
     _tasksSubscription = _meteor.subscribe('tasks', args: _filter.toArgs());
     await _fetchTotalPages();
+    } catch(e){
+      rethrow;
+    }
+    
+  }
+
+  Future<String?> getProfilePic(String id) async {
+    if (profilePics.containsKey(id)) return profilePics[id];
+
+    try {
+      final result = await _meteor.call('getUserPic', args: [id]);
+      if (result != null && result['imagem'] != null) {
+        profilePics[id] = result['imagem']; 
+        return result['imagem'];
+      }
+      return null; 
+    } catch (e) {
+      return null; 
+    }
   }
 
   Future<void> addTask(Task task) async {
@@ -255,6 +284,13 @@ class MongoService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> toggleSortByDate() async {
+    _filter.sortDescending = !_filter.sortDescending;
+    _filter.pagina = 1;    
+    await updateSubscribe();
+    notifyListeners();
+  }
+  
   void nextPage() {
     if (_filter.pagina < 1 || _filter.pagina >= _totalPages) {
       _filter.pagina = 1;

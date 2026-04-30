@@ -65,7 +65,7 @@ Meteor.methods({
       ...(hideCompleted ? { situacao: { $ne: "concluido" } } : {}),
       ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
     }).countAsync();
-  }
+  },
   /* async "CreateUser"(doc) {
 
     if (!doc.email || !doc.password || !doc.username) {
@@ -99,6 +99,7 @@ Meteor.methods({
     }
     return new Meteor.Error('email-existente', 'Cadastro já existente!');
   },
+  */
   async "EditUser"(doc) {
 
     if (!this.userId) {
@@ -116,24 +117,6 @@ Meteor.methods({
       }
       await Accounts.setUsername(this.userId, doc.username);
 
-    }
-
-    const emailAtual = user.emails && user.emails[0] ? user.emails[0].address : null;
-    if (doc.email && doc.email !== emailAtual) {
-      if (await Accounts.findUserByEmail(doc.email)) {
-        return new Meteor.Error('email-existente', 'Email já está em uso.');
-      }
-      if (emailAtual) {
-        await Accounts.replaceEmailAsync(
-          this.userId,
-          emailAtual,
-          doc.email,
-          false,  // this param is optional 
-        );
-      } else {
-        await Accounts.addEmailAsync(this.userId, doc.email, false);
-      }
-      Accounts.sendVerificationEmail(this.userId, doc.email);
     }
 
     if (doc.firstname && doc.lastname && doc.empresa && doc.sexo && doc.dataNasc && doc.imagem) {
@@ -154,7 +137,7 @@ Meteor.methods({
     return ("Edição feita com sucesso");
   },
 
-  async "getUserImagem"(targetUserId) {
+  async "getUserPic"(targetUserId) {
     if (!this.userId) {
       return new Meteor.Error('nao-autorizado', 'Você precisa estar logado para ver imagens.');
     }
@@ -167,5 +150,5 @@ Meteor.methods({
       return new Meteor.Error('nao-encontrado', 'Usuário não encontrado.');
     }
     return {imagem: user?.profile?.imagem, reason: "Sucesso"};
-  } */
+  } 
 });

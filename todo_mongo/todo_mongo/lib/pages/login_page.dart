@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -78,6 +80,51 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void onGoogleSignIn() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final success = await mongoService!.signInWithGoogle();
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (!success) {
+        return; 
+      }
+
+    } on TimeoutException {
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('O servidor demorou a responder. Verifique sua conexão e tente novamente.'),
+          backgroundColor: Colors.orange.shade800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); 
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Erro ao fazer login com o Google.'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     usernameController.text = 'teste@teste.com';
@@ -177,9 +224,7 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       SquareTile(
                         imagePath: 'lib/images/google.png',
-                        onTap: () {
-                          mongoService!.signInWithGoogle();
-                        },
+                        onTap: onGoogleSignIn,
                       ),
                       SquareTile(
                         imagePath: 'lib/images/apple.png',

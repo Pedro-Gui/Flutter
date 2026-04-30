@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/user_model.dart';
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
@@ -8,6 +10,7 @@ class MyDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mongoService = Provider.of<MongoService>(context, listen: false);
+
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -16,17 +19,68 @@ class MyDrawer extends StatelessWidget {
             Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.list_outlined,
-                  size: 100,
-                  color: Theme.of(context).colorScheme.inversePrimary,
+                StreamBuilder(
+                  stream: mongoService.currentUserData,
+                  builder: (context, snapshot) {
+                    if (mongoService.currentUserId == null) {
+                      return const Center(
+                        child: Text('Faça login para ver seu perfil.'),
+                      );
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child: Text('Faça login para ver seu perfil.'),
+                      );
+                    }
+
+                    final User user = snapshot.data!;
+                    final profile = user.profile ?? {};
+                    final base64String = profile['imagem'] ?? '';
+
+                    return DrawerHeader(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.inversePrimary,
+                            backgroundImage:
+                                (base64String != null &&
+                                    base64String.isNotEmpty)
+                                ? MemoryImage(base64Decode(base64String))
+                                : null,
+                            child:
+                                (base64String == null || base64String.isEmpty)
+                                ? const Icon(Icons.person, size: 40)
+                                : null,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            user.username,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 25,),
+                  padding: const EdgeInsets.only(left: 25),
                   child: ListTile(
                     title: const Text('Home'),
                     leading: const Icon(Icons.home),
-                    onTap: () => Navigator.pushNamed(context, '/homePage'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/homePage');
+                    },
                   ),
                 ),
                 Padding(
@@ -34,17 +88,27 @@ class MyDrawer extends StatelessWidget {
                   child: ListTile(
                     title: const Text('Profile'),
                     leading: const Icon(Icons.person),
-                    onTap: () => Navigator.pushNamed(context, '/profilePage'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/profilePage');
+                    },
                   ),
                 ),
-                ],
+              ],
             ),
+
             Padding(
               padding: const EdgeInsets.only(left: 25, bottom: 25),
               child: ListTile(
                 title: const Text('logout'),
                 leading: const Icon(Icons.logout),
-                onTap: () => mongoService.signOut(),
+                onTap: () {
+                  Navigator.pop(context);
+                  mongoService.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                },
               ),
             ),
           ],

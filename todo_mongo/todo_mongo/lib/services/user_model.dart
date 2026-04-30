@@ -3,12 +3,14 @@ class User{
   final String username;
   final List<String> emails;
   final DateTime? createdAt;
+  final Map<String, dynamic>? profile;
 
   User({
     required this.id,
     required this.username,
     required this.emails,
     this.createdAt,
+    this.profile,
   });
 
   factory User.fromMap(Map<String, dynamic> map) {
@@ -19,6 +21,7 @@ class User{
           ? (map['emails'] as List).map((email) => email['address'] as String).toList() : [],
       createdAt: map['createdAt'] is DateTime 
           ? map['createdAt']: DateTime.tryParse(map['createdAt'].toString()),
+      profile: map['profile'] as Map<String, dynamic>?,
     );
   }
 

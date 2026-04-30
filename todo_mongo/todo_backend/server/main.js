@@ -4,14 +4,29 @@ import { Accounts } from 'meteor/accounts-base';
 import "../imports/api/tasksMethods";
 import "../imports/api/TasksPublications";
 import { TodoCollection } from "../imports/api/TasksCollection";
+import { fetch } from 'meteor/fetch'; // Meteor 3.0+ já tem fetch nativo
+
+// Função auxiliar para transformar URL em Base64
+async function getBase64FromUrl(url) {
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return buffer.toString('base64');
+  } catch (e) {
+    console.error("Erro ao converter imagem do Google:", e);
+    return null;
+  }
+}
 
 Meteor.startup(async () => {
-  const USER_NAME = 'teste';
+  const USER_NAME = 'UserTest';
   const USER_EMAIL = 'teste@teste.com';
   const USER_PASSWORD = '123';
   let idDoUsuarioDeTeste;
   const userExists = await Accounts.findUserByUsername(USER_NAME);
-  
+
 
   if (!userExists) {
     await Accounts.createUserAsync({
@@ -30,26 +45,32 @@ Meteor.startup(async () => {
     console.log('Coleção TODO está vazia. Inserindo tarefas de exemplo...');
 
     const tarefasIniciais = [
-      { title: 'Configurar servidor Meteor', 
-        userId: idDoUsuarioDeTeste, 
-        ownerUsername: USER_NAME, 
+      {
+        title: 'Configurar servidor Meteor',
+        userId: idDoUsuarioDeTeste,
+        ownerUsername: USER_NAME,
         situacao: 'emAndamento',
-        privado: false, 
-        createdAt: new Date(), },
-
-      { title: 'Conectar Flutter via DDP', 
-        userId: idDoUsuarioDeTeste, 
-        ownerUsername: USER_NAME, 
-        situacao: 'concluido', 
         privado: false,
-        createdAt: new Date(), },
+        createdAt: new Date(),
+      },
 
-      { title: 'Fazer o primeiro CRUD funcionar no mobile', 
-        userId: idDoUsuarioDeTeste, 
-        ownerUsername: USER_NAME, 
-        situacao: 'naoConcluido', 
+      {
+        title: 'Conectar Flutter via DDP',
+        userId: idDoUsuarioDeTeste,
+        ownerUsername: USER_NAME,
+        situacao: 'concluido',
+        privado: false,
+        createdAt: new Date(),
+      },
+
+      {
+        title: 'Fazer o primeiro CRUD funcionar no mobile',
+        userId: idDoUsuarioDeTeste,
+        ownerUsername: USER_NAME,
+        situacao: 'naoConcluido',
         privado: true,
-        createdAt: new Date(), }
+        createdAt: new Date(),
+      }
     ];
 
     for (const tarefa of tarefasIniciais) {
@@ -89,11 +110,13 @@ Accounts.registerLoginHandler('googleNative', async (loginRequest) => {
       const userId = await Accounts.createUserAsync({
         email: email,
       });
+      const base64Imagem = await getBase64FromUrl(googleData.picture);
 
       await Meteor.users.updateAsync(userId, {
         $set: {
           'username': googleData.name,
-          'profilePicture': googleData.picture,
+          'profile.name': googleData.name,
+          'profile.imagem': base64Imagem,
           'services.google': googleData
         }
       });

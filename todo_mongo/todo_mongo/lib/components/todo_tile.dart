@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:todo_mongo/components/user_avatar.dart';
 
 class ToDoTile extends StatelessWidget {
   final String taskName;
   final String situacao;
   final String owner;
+  final String userId;
   final void Function()? onChanged;
   final void Function()? onDelete;
   final void Function()? onEdit;
@@ -15,6 +17,7 @@ class ToDoTile extends StatelessWidget {
     required this.taskName,
     required this.situacao,
     required this.owner,
+    required this.userId,
     required this.onChanged,
     required this.onDelete,
     required this.onEdit,
@@ -114,11 +117,7 @@ class ToDoTile extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 14,
-                          color: Theme.of(context,).colorScheme.onPrimary,
-                        ),
+                        UserAvatar(userId: userId, radius: 12.0,),
                         const SizedBox(width: 4),
                         Text(
                           owner.toUpperCase(),

@@ -35,7 +35,7 @@ class MySwitch extends StatelessWidget {
           filled: true,
       
           labelText: label,
-          labelStyle: TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
+          labelStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
         ),
       
         child: CupertinoSwitch(value: private, onChanged: onChanged),

@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -80,6 +82,51 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  void onGoogleSignIn() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final success = await mongoService!.signInWithGoogle();
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (!success) {
+        return; 
+      }
+
+    } on TimeoutException {
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('O servidor demorou a responder. Verifique sua conexão e tente novamente.'),
+          backgroundColor: Colors.orange.shade800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); 
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Erro ao fazer login com o Google.'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     mongoService = Provider.of<MongoService>(context, listen: false);
@@ -110,17 +157,19 @@ class _RegisterPageState extends State<RegisterPage> {
                   hintText: 'Email',
                   obscureText: false,
                 ),
+                const SizedBox(height: 5),
                 MyTextfield(
                   controller: usernameController,
                   hintText: 'Username',
                   obscureText: false,
                 ),
+                const SizedBox(height: 5),
                 MyTextfield(
                   controller: passwordController,
                   hintText: 'Password',
                   obscureText: true,
                 ),
-
+                const SizedBox(height: 5),
                 MyTextfield(
                   controller: confirmPasswordController,
                   hintText: 'Confirm password',
@@ -131,7 +180,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 MyButton(onTap: onSignUserUp, text: 'Sign Up'),
 
-                const SizedBox(height: 50),
+                const SizedBox(height: 30),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 25.0),
@@ -154,7 +203,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
 
-                const SizedBox(height: 50),
+                const SizedBox(height: 30),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 25.0),
@@ -163,7 +212,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       SquareTile(
                         imagePath: 'lib/images/google.png',
-                        onTap: () {mongoService!.signInWithGoogle();},
+                        onTap: onGoogleSignIn,
                       ),
                       SquareTile(
                         imagePath: 'lib/images/apple.png',
@@ -173,7 +222,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 20),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

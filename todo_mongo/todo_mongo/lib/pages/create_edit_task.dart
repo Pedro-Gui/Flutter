@@ -262,12 +262,12 @@ class _CreateEditTaskState extends State<CreateEditTask> {
                         width: 250,
                         child: DropdownButtonFormField<String>(
                           initialValue: situacaoSelecionada,
+                          
                           decoration: InputDecoration(
                             labelText: 'Situation',
                             labelStyle: TextStyle(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.inversePrimary,
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
@@ -279,7 +279,7 @@ class _CreateEditTaskState extends State<CreateEditTask> {
                               borderSide: BorderSide(color: Colors.grey[600]!),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            fillColor: Theme.of(context).colorScheme.secondary,
+                            fillColor: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
                             filled: true,
                           ),
 

@@ -87,7 +87,6 @@ class _HomePageState extends State<HomePage> {
               }
               if (!context.mounted) return;
               Navigator.pop(context);
-              Navigator.pop(context);
             },
             child: Text(
               'Confirm',
@@ -98,52 +97,71 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-  void onChanged(String text){
-    print('|||||||| \n');
-    print(controller.text);
-     mongoService!.setSearch(controller.text); 
+
+  void onChanged(String text) {
+    mongoService!.setSearch(controller.text);
   }
+
   @override
   Widget build(BuildContext context) {
-    final bool hideCompleted = mongoService!.filter.hideCompleted;
-
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'TODO',
-            style: GoogleFonts.montserrat(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2.0,
-              color: Theme.of(context).colorScheme.inversePrimary,
-            ),
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'TODO',
+          style: GoogleFonts.montserrat(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2.0,
+            color: Theme.of(context).colorScheme.inversePrimary,
           ),
-          centerTitle: true,
-          actions: [
-            PopupMenuButton(
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  onTap: () {mongoService!.toggleCompleted();},
-                  child: Text(
-                    hideCompleted ? 'Show Completed' : 'Hide Completed',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.inversePrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
-        drawer: const MyDrawer(),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
+        centerTitle: true,
+      ),
+      drawer: const MyDrawer(),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SafeArea(
             child: Column(
               children: [
-                MyTextfield(controller: controller, hintText: 'Search', obscureText: false, onChanged: onChanged,),
+                Row(
+                  children: [
+                    Expanded(
+                      child: MyTextfield(
+                        controller: controller,
+                        hintText: 'Search',
+                        obscureText: false,
+                        onChanged: onChanged,
+                        showClearButton: true,
+                      ),
+                    ),
+                    PopupMenuButton(
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          onTap: () {
+                            mongoService!.toggleCompleted();
+                          },
+                          child: Text(
+                            mongoService!.filter.hideCompleted
+                                ? 'Show Completed'
+                                : 'Hide Completed',
+                          ),
+                        ),
+                        PopupMenuItem(
+                          onTap: () {
+                            mongoService!.toggleSortByDate();
+                          },
+                          child: Text(
+                            mongoService!.filter.sortDescending
+                                ? 'Order: Oldest'
+                                : 'Order: Latest',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
                 Expanded(
                   child: StreamBuilder<List<Task>>(
                     stream: mongoService!.todoCollection,
@@ -156,21 +174,21 @@ class _HomePageState extends State<HomePage> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-
+                
                       if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return const Center(
                           child: Text('Nenhuma tarefa encontrada.'),
                         );
                       }
-
+                
                       final List<Task> dados = snapshot.data!;
-
+                
                       if (dados.isEmpty) {
                         return const Center(
                           child: Text('Nenhuma tarefa encontrada no banco.'),
                         );
                       }
-
+                
                       return Column(
                         children: [
                           Expanded(
@@ -181,6 +199,7 @@ class _HomePageState extends State<HomePage> {
                                 return ToDoTile(
                                   taskName: task.title,
                                   situacao: task.situacao,
+                                  userId: task.userId,
                                   owner: task.ownerUsername,
                                   onChanged: () async {
                                     try {
@@ -206,7 +225,7 @@ class _HomePageState extends State<HomePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 IconButton(
-                                  onPressed:  () => mongoService!.previousPage(), 
+                                  onPressed: () => mongoService!.previousPage(),
                                   icon: const Icon(Icons.chevron_left),
                                   color: Theme.of(context).colorScheme.primary,
                                 ),
@@ -216,15 +235,19 @@ class _HomePageState extends State<HomePage> {
                                     vertical: 8.0,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                     borderRadius: BorderRadius.circular(8.0),
                                   ),
                                   child: Text(
-                                    'Página ${mongoService!.filter.pagina}',
+                                    'Page ${mongoService!.filter.pagina}',
                                     style: GoogleFonts.montserrat(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.onPrimary
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
                                     ),
                                   ),
                                 ),
@@ -245,13 +268,13 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            editOrAdd(false, null, context);
-          },
-          child: const Icon(Icons.add),
-        ),
+      ),
+    
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          editOrAdd(false, null, context);
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
