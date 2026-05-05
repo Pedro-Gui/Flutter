@@ -4,11 +4,24 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_mongo/components/my_drawer.dart';
 import 'package:todo_mongo/components/edit_profile_form.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/auth_service.dart';
 import 'package:todo_mongo/services/user_model.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  AuthService? authService;
+
+  @override
+  void initState() {
+    super.initState();
+    authService = Provider.of<AuthService>(context, listen: false);
+  }
 
   void _showEditSheet(BuildContext context, User user) {
     showModalBottomSheet(
@@ -23,8 +36,6 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MongoService mongoService = Provider.of<MongoService>(context, listen: false);
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -40,9 +51,9 @@ class ProfilePage extends StatelessWidget {
       ),
       drawer: const MyDrawer(),
       body: StreamBuilder<User?>(
-        stream: mongoService.currentUserData,
+        stream: authService!.currentUserData,
         builder: (context, snapshot) {
-          if (mongoService.currentUserId == null) {
+          if (authService!.currentUserId == null) {
             return const Center(child: Text('Faça login para ver seu perfil.'));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -96,7 +107,7 @@ class ProfilePage extends StatelessWidget {
         },
       ),
       floatingActionButton: StreamBuilder<User?>(
-        stream: mongoService.currentUserData,
+        stream: authService!.currentUserData,
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const SizedBox.shrink();
           return FloatingActionButton(

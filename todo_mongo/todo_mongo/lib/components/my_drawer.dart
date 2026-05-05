@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/auth_service.dart';
+import 'package:todo_mongo/services/task_service.dart';
 import 'package:todo_mongo/services/user_model.dart';
 
 class MyDrawer extends StatelessWidget {
@@ -9,7 +10,7 @@ class MyDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mongoService = Provider.of<MongoService>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
 
     return Drawer(
       child: SafeArea(
@@ -20,9 +21,9 @@ class MyDrawer extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 StreamBuilder(
-                  stream: mongoService.currentUserData,
+                  stream: authService.currentUserData,
                   builder: (context, snapshot) {
-                    if (mongoService.currentUserId == null) {
+                    if (authService.currentUserId == null) {
                       return const Center(
                         child: Text('Faça login para ver seu perfil.'),
                       );
@@ -104,7 +105,8 @@ class MyDrawer extends StatelessWidget {
                 leading: const Icon(Icons.logout),
                 onTap: () {
                   Navigator.pop(context);
-                  mongoService.signOut();
+                  context.read<TaskService>().clearSubscription();
+                  authService.signOut();
                   if (context.mounted) {
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   }

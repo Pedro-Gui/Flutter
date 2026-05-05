@@ -1,13 +1,11 @@
-
 import 'dart:async';
-
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_mongo/components/my_button.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
 import 'package:todo_mongo/components/square_tile.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   final void Function()? onTap;
@@ -22,8 +20,14 @@ class _RegisterPageState extends State<RegisterPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
-  MongoService? mongoService;
+  AuthService? authService;
   
+  @override
+  void initState() {
+    super.initState();
+    authService = Provider.of<AuthService>(context, listen: false);
+  }
+
   void onSignUserUp() async {
 
     if (passwordController.text != confirmPasswordController.text) {
@@ -40,7 +44,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      await mongoService!.createUserWithEmail(
+      await authService!.createUserWithEmail(
         usernameController.text.trim(),
         emailController.text.trim(),
         passwordController.text,
@@ -90,7 +94,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      final success = await mongoService!.signInWithGoogle();
+      final success = await authService!.signInWithGoogle();
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -129,7 +133,6 @@ class _RegisterPageState extends State<RegisterPage> {
   
   @override
   Widget build(BuildContext context) {
-    mongoService = Provider.of<MongoService>(context, listen: false);
     return Scaffold(
       backgroundColor: Colors.grey[300],
       body: SafeArea(

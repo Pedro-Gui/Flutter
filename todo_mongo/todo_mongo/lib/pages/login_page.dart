@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:todo_mongo/components/my_button.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
 import 'package:todo_mongo/components/square_tile.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   final void Function()? onTap;
@@ -19,7 +19,13 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
-  MongoService? mongoService;
+  AuthService? authService;
+
+  @override
+  void initState() {
+    super.initState();
+    authService = Provider.of<AuthService>(context, listen: false);
+  }
 
   void onSingUserIn() async {
     showDialog(
@@ -29,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      await mongoService!.loginWithEmail(
+      await authService!.loginWithEmail(
         usernameController.text.trim(),
         passwordController.text,
       );
@@ -88,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      final success = await mongoService!.signInWithGoogle();
+      final success = await authService!.signInWithGoogle();
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -129,7 +135,6 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     usernameController.text = 'teste@teste.com';
     passwordController.text = '123';
-    mongoService = Provider.of<MongoService>(context, listen: false);
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(

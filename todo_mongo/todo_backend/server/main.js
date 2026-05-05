@@ -103,19 +103,26 @@ Accounts.registerLoginHandler('googleNative', async (loginRequest) => {
 
     const email = googleData.email;
 
-
     let user = await Meteor.users.findOneAsync({ 'emails.address': email });
 
     if (!user) {
       const userId = await Accounts.createUserAsync({
         email: email,
       });
+      let safeUsername = googleData.name;
+      let usernameExists = await Accounts.findUserByUsername(safeUsername);
+
+      while (usernameExists) {
+        const uniqueSuffix = Math.floor(1000 + Math.random() * 9000);
+        safeUsername = `${googleData.name}_${uniqueSuffix}`;
+        usernameExists = await Accounts.findUserByUsername(safeUsername);
+      }
       const base64Imagem = await getBase64FromUrl(googleData.picture);
 
       await Meteor.users.updateAsync(userId, {
         $set: {
-          'username': googleData.name,
-          'profile.name': googleData.name,
+          'username': safeUsername,
+          'profile.name': safeUsername,
           'profile.imagem': base64Imagem,
           'services.google': googleData
         }

@@ -1,7 +1,7 @@
 import 'dart:convert'; // Necessário para o base64Decode
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/profile_service.dart';
 // importe o seu mongo_service.dart
 
 class UserAvatar extends StatelessWidget {
@@ -11,10 +11,10 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mongoService = Provider.of<MongoService>(context, listen: false);
+    final profileService = Provider.of<ProfileService>(context, listen: false);
 
     return FutureBuilder<String?>(
-      future: mongoService.getProfilePic(userId),
+      future: profileService.getProfilePic(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return CircleAvatar(

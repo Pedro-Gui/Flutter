@@ -5,8 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:todo_mongo/components/my_drawer.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
 import 'package:todo_mongo/components/todo_tile.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/auth_service.dart';
 import 'package:todo_mongo/services/task_model.dart';
+import 'package:todo_mongo/services/task_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,13 +17,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  MongoService? mongoService;
+  TaskService? taskService;
+  AuthService? authService;
   final TextEditingController controller = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    mongoService = Provider.of<MongoService>(context, listen: false);
+    taskService = Provider.of<TaskService>(context, listen: false);
+    authService = Provider.of<AuthService>(context, listen: false);
+    taskService!.updateSubscribe();
+  
   }
 
   void editOrAdd(bool isEdit, Task? task, BuildContext context) {
@@ -78,7 +83,7 @@ class _HomePageState extends State<HomePage> {
             ),
             onPressed: () async {
               try {
-                await mongoService!.deleteTask(taskId);
+                await taskService!.deleteTask(taskId);
               } on MeteorError catch (e) {
                 if (!context.mounted) return;
                 showError(e, context);
@@ -99,7 +104,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void onChanged(String text) {
-    mongoService!.setSearch(controller.text);
+    taskService!.setSearch(controller.text);
   }
 
   @override
@@ -140,20 +145,20 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder: (context) => [
                         PopupMenuItem(
                           onTap: () {
-                            mongoService!.toggleCompleted();
+                            taskService!.toggleCompleted();
                           },
                           child: Text(
-                            mongoService!.filter.hideCompleted
+                            taskService!.filter.hideCompleted
                                 ? 'Show Completed'
                                 : 'Hide Completed',
                           ),
                         ),
                         PopupMenuItem(
                           onTap: () {
-                            mongoService!.toggleSortByDate();
+                            taskService!.toggleSortByDate();
                           },
                           child: Text(
-                            mongoService!.filter.sortDescending
+                            taskService!.filter.sortDescending
                                 ? 'Order: Oldest'
                                 : 'Order: Latest',
                           ),
@@ -164,9 +169,9 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Expanded(
                   child: StreamBuilder<List<Task>>(
-                    stream: mongoService!.todoCollection,
+                    stream: taskService!.todoCollection,
                     builder: (context, snapshot) {
-                      if (mongoService!.currentUserId == null) {
+                      if (authService!.currentUserId == null) {
                         return const Center(
                           child: Text('Faça login para ver suas tarefas.'),
                         );
@@ -203,7 +208,7 @@ class _HomePageState extends State<HomePage> {
                                   owner: task.ownerUsername,
                                   onChanged: () async {
                                     try {
-                                      await mongoService!.updateSituacao(
+                                      await taskService!.updateSituacao(
                                         task.id,
                                         task.situacao,
                                       );
@@ -225,7 +230,7 @@ class _HomePageState extends State<HomePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 IconButton(
-                                  onPressed: () => mongoService!.previousPage(),
+                                  onPressed: () => taskService!.previousPage(),
                                   icon: const Icon(Icons.chevron_left),
                                   color: Theme.of(context).colorScheme.primary,
                                 ),
@@ -241,7 +246,7 @@ class _HomePageState extends State<HomePage> {
                                     borderRadius: BorderRadius.circular(8.0),
                                   ),
                                   child: Text(
-                                    'Page ${mongoService!.filter.pagina}',
+                                    'Page ${taskService!.filter.pagina}',
                                     style: GoogleFonts.montserrat(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -252,7 +257,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                                 IconButton(
-                                  onPressed: () => mongoService!.nextPage(),
+                                  onPressed: () => taskService!.nextPage(),
                                   icon: const Icon(Icons.chevron_right),
                                   color: Theme.of(context).colorScheme.primary,
                                 ),

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/profile_service.dart';
 import 'package:todo_mongo/services/user_model.dart';
 
 class EditProfileForm extends StatefulWidget {
@@ -94,7 +94,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
         'imagem': _base64Image, 
       };
 
-      await context.read<MongoService>().editUserProfile(doc);
+      await context.read<ProfileService>().editUserProfile(doc);
 
       if (!mounted) return;
       Navigator.pop(context);

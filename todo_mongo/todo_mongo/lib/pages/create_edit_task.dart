@@ -5,8 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:todo_mongo/components/my_button.dart';
 import 'package:todo_mongo/components/my_switch.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
-import 'package:todo_mongo/services/mongo_service.dart';
+import 'package:todo_mongo/services/auth_service.dart';
 import 'package:todo_mongo/services/task_model.dart';
+import 'package:todo_mongo/services/task_service.dart';
 
 class CreateEditTask extends StatefulWidget {
   final bool isEdit;
@@ -21,6 +22,8 @@ class _CreateEditTaskState extends State<CreateEditTask> {
   late bool private;
   late String situacaoSelecionada;
   final TextEditingController titleController = TextEditingController();
+  AuthService? authService;
+  TaskService? taskService;
 
   @override
   void initState() {
@@ -30,6 +33,10 @@ class _CreateEditTaskState extends State<CreateEditTask> {
         ? widget.task!.situacao
         : 'naoConcluido';
     titleController.text = widget.isEdit ? widget.task!.title : '';
+
+    taskService = Provider.of<TaskService>(context,listen: false,);
+    authService = Provider.of<AuthService>(context,listen: false,);
+
   }
 
   void onPrivateChanged(bool value) {
@@ -75,10 +82,7 @@ class _CreateEditTaskState extends State<CreateEditTask> {
 
   @override
   Widget build(BuildContext context) {
-    final MongoService mongoService = Provider.of<MongoService>(
-      context,
-      listen: false,
-    );
+    
     void showError(MeteorError e, BuildContext context) {
       String message = 'Ocorreu um erro inesperado.';
 
@@ -132,12 +136,12 @@ class _CreateEditTaskState extends State<CreateEditTask> {
                   situacao: situacaoSelecionada,
                   privado: private,
                   userId: widget.isEdit ? widget.task!.userId : '',
-                  ownerUsername: mongoService.currentUsername ?? 'Desconhecido',
+                  ownerUsername: authService!.currentUsername ?? 'Desconhecido',
                   createdAt: widget.isEdit ? widget.task!.createdAt : null,
                 );
                 if (widget.isEdit) {
                   try {
-                    await mongoService.updateTask(tarefaParaSalvar);
+                    await taskService!.updateTask(tarefaParaSalvar);
                   } on MeteorError catch (e) {
                     if (!context.mounted) return;
                     showError(e, context);
@@ -146,7 +150,7 @@ class _CreateEditTaskState extends State<CreateEditTask> {
                   }
                 } else {
                   try {
-                    await mongoService.addTask(tarefaParaSalvar);
+                    await taskService!.addTask(tarefaParaSalvar);
                   } on MeteorError catch (e) {
                     if (!context.mounted) return;
                     showError(e, context);
@@ -190,7 +194,7 @@ class _CreateEditTaskState extends State<CreateEditTask> {
               ),
               onPressed: () async {
                 try {
-                  await mongoService.deleteTask(widget.task!.id);
+                  await taskService!.deleteTask(widget.task!.id);
                 } on MeteorError catch (e) {
                   if (!context.mounted) return;
                   showError(e, context);
