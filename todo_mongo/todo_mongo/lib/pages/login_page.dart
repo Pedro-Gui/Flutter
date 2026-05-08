@@ -2,30 +2,37 @@ import 'dart:async';
 
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todo_mongo/components/my_button.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
 import 'package:todo_mongo/components/square_tile.dart';
-import 'package:todo_mongo/services/auth_service.dart';
+import 'package:todo_mongo/services/auth/auth_controller.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   final void Function()? onTap;
   const LoginPage({super.key, required this.onTap});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
-  AuthService? authService;
-
   @override
   void initState() {
     super.initState();
-    authService = Provider.of<AuthService>(context, listen: false);
+    usernameController.text = 'teste@teste.com';
+    passwordController.text = '123';
   }
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
 
   void onSingUserIn() async {
     showDialog(
@@ -35,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      await authService!.loginWithEmail(
+      await ref.read(authControllerProvider.notifier).loginWithEmail(
         usernameController.text.trim(),
         passwordController.text,
       );
@@ -94,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      final success = await authService!.signInWithGoogle();
+      final success = await ref.read(authControllerProvider.notifier).signInWithGoogle();
 
       if (!mounted) return;
       Navigator.pop(context);

@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:todo_mongo/services/auth_service.dart';
-import 'package:todo_mongo/services/task_service.dart';
-import 'package:todo_mongo/services/user_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:todo_mongo/services/auth/auth_controller.dart';
+import 'package:todo_mongo/models/user_model.dart';
+import 'package:todo_mongo/services/task/task_controller.dart';
 
-class MyDrawer extends StatelessWidget {
+class MyDrawer extends ConsumerWidget {
   const MyDrawer({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authService = ref.watch(authControllerProvider);
 
     return Drawer(
       child: SafeArea(
@@ -20,59 +20,21 @@ class MyDrawer extends StatelessWidget {
             Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                StreamBuilder(
-                  stream: authService.currentUserData,
-                  builder: (context, snapshot) {
-                    if (authService.currentUserId == null) {
-                      return const Center(
-                        child: Text('Faça login para ver seu perfil.'),
-                      );
-                    }
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(
-                        child: Text('Faça login para ver seu perfil.'),
-                      );
-                    }
-
-                    final User user = snapshot.data!;
-                    final profile = user.profile ?? {};
-                    final base64String = profile['imagem'] ?? '';
-
-                    return DrawerHeader(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.inversePrimary,
-                            backgroundImage:
-                                (base64String != null &&
-                                    base64String.isNotEmpty)
-                                ? MemoryImage(base64Decode(base64String))
-                                : null,
-                            child:
-                                (base64String == null || base64String.isEmpty)
-                                ? const Icon(Icons.person, size: 40)
-                                : null,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            user.username,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                switch (authService) {
+                  AsyncData(:final value) => _buildHeader(context, value),
+                  AsyncError() => const DrawerHeader(
+                    child: Center(
+                      child: Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 40,
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                  _ => const DrawerHeader(
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                },
                 Padding(
                   padding: const EdgeInsets.only(left: 25),
                   child: ListTile(
@@ -105,8 +67,9 @@ class MyDrawer extends StatelessWidget {
                 leading: const Icon(Icons.logout),
                 onTap: () {
                   Navigator.pop(context);
-                  context.read<TaskService>().clearSubscription();
-                  authService.signOut();
+                  ref.invalidate(taskControllerProvider);
+                  ref.invalidate(tasksStreamProvider);
+                  ref.read(authControllerProvider.notifier).signOut();
                   if (context.mounted) {
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   }
@@ -115,6 +78,34 @@ class MyDrawer extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, User? user) {
+    final profile = user?.profile ?? {};
+    final base64String = profile['imagem'] ?? '';
+
+    return DrawerHeader(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            backgroundImage: (base64String != null && base64String.isNotEmpty)
+                ? MemoryImage(base64Decode(base64String))
+                : null,
+            child: (base64String == null || base64String.isEmpty)
+                ? const Icon(Icons.person, size: 40)
+                : null,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            user?.username ?? 'undefined name',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }

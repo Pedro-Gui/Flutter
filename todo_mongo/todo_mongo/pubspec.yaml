@@ -10,16 +10,20 @@ dependencies:
   dart_meteor: ^3.0.0
   flutter:
     sdk: flutter
+  flutter_riverpod: ^3.3.1
   flutter_slidable: ^4.0.3
   google_fonts: ^8.0.2
   google_sign_in: ^7.2.0
   image_picker: ^1.2.2
   provider: ^6.1.5+1
+  riverpod_annotation: ^4.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  riverpod_generator: ^4.0.3
+  build_runner: ^2.15.0
 
 flutter:
   uses-material-design: true

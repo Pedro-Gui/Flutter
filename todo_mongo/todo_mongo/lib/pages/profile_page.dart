@@ -1,32 +1,26 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:todo_mongo/components/my_drawer.dart';
-import 'package:todo_mongo/components/edit_profile_form.dart';
-import 'package:todo_mongo/services/auth_service.dart';
-import 'package:todo_mongo/services/user_model.dart';
 
-class ProfilePage extends StatefulWidget {
+import '../components/my_drawer.dart';
+import '../components/edit_profile_form.dart';
+import '../components/user_avatar.dart';
+import '../models/user_model.dart';
+import '../services/auth/auth_controller.dart';
+
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
-  AuthService? authService;
-
-  @override
-  void initState() {
-    super.initState();
-    authService = Provider.of<AuthService>(context, listen: false);
-  }
-
-  void _showEditSheet(BuildContext context, User user) {
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  
+  void _showEditSheet(User user) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, 
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -36,6 +30,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final userAsync = ref.watch(authControllerProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -50,85 +46,78 @@ class _ProfilePageState extends State<ProfilePage> {
         centerTitle: true,
       ),
       drawer: const MyDrawer(),
-      body: StreamBuilder<User?>(
-        stream: authService!.currentUserData,
-        builder: (context, snapshot) {
-          if (authService!.currentUserId == null) {
-            return const Center(child: Text('Faça login para ver seu perfil.'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: Text('Faça login para ver seu perfil.'));
-          }
+      body: switch (userAsync) {
+        AsyncData(:final value) => value != null 
+            ? _buildProfileData(value) 
+            : const Center(child: Text('Faça login para ver seu perfil.')),
+        AsyncError(:final error) => Center(child: Text('Erro ao carregar perfil: $error')),
+        _ => const Center(child: CircularProgressIndicator()),
+      },
+     
+      floatingActionButton: userAsync.value != null
+          ? FloatingActionButton(
+              onPressed: () => _showEditSheet(userAsync.value!),
+              child: const Icon(Icons.edit),
+            )
+          : null,
+    );
+  }
 
-          final User user = snapshot.data!;
-          final profile = user.profile ?? {};
-          final base64Image = profile['imagem'] ?? '';
+  Widget _buildProfileData(User user) {
+    final profile = user.profile ?? {};
 
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Theme.of(context).colorScheme.inversePrimary.withValues(alpha: 0.1),
-                  backgroundImage: base64Image.isNotEmpty 
-                      ? MemoryImage(base64Decode(base64Image)) 
-                      : null,
-                  child: base64Image.isEmpty 
-                      ? Icon(Icons.person, size: 60, color: Theme.of(context).colorScheme.inversePrimary)
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildInfoRow(context, 'Username', user.username.toUpperCase()),
-                      _buildInfoRow(context, 'Email', user.emails.isNotEmpty ? user.emails[0] : 'N/A'),
-                      const Divider(height: 30),
-                      _buildInfoRow(context, 'Nome', '${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}'),
-                      _buildInfoRow(context, 'Empresa', profile['empresa'] ?? 'Não informado'),
-                      _buildInfoRow(context, 'Sexo', profile['sexo'] ?? 'Não informado'),
-                    ],
-                  ),
-                ),
-              ],
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            UserAvatar(
+              userId: user.id,
+              radius: 60.0,
             ),
-          );
-        },
-      ),
-      floatingActionButton: StreamBuilder<User?>(
-        stream: authService!.currentUserData,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const SizedBox.shrink();
-          return FloatingActionButton(
-            onPressed: () => _showEditSheet(context, snapshot.data!),
-            child: const Icon(Icons.edit),
-          );
-        }
+            const SizedBox(height: 20),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  _buildInfoRow('Username', user.username.toUpperCase()),
+                  _buildInfoRow('Email', user.emails.isNotEmpty ? user.emails.first : 'N/A'),
+                  const Divider(height: 30),
+                  _buildInfoRow('Nome', '${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}'),
+                  _buildInfoRow('Empresa', profile['empresa'] ?? 'Não informado'),
+                  _buildInfoRow('Sexo', profile['sexo'] ?? 'Não informado'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, String label, String value) {
+  Widget _buildInfoRow(String label, String value) {
+    final displayValue = value.trim().isEmpty ? 'N/A' : value;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           Flexible(
             child: Text(
-              value.isEmpty ? 'N/A' : value, 
+              displayValue,
               style: TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
               textAlign: TextAlign.right,
             ),

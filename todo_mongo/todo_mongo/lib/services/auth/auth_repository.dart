@@ -1,18 +1,21 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dart_meteor/dart_meteor.dart';
-import 'package:todo_mongo/services/user_model.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:todo_mongo/models/user_model.dart';
+import '../meteor_provider.dart';
 
-class AuthService extends ChangeNotifier {
+part 'auth_repository.g.dart';
+
+class AuthRepository {
   final MeteorClient _meteor;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  final GoogleSignIn _googleSignIn;
 
-  AuthService(this._meteor);
+  AuthRepository(this._meteor) : _googleSignIn = GoogleSignIn.instance;
 
-  Stream<DdpConnectionStatus> get connectionStatus => _meteor.status();
-  Stream<String?> get authStateChanges => _meteor.userId();
-  
+  //Stream<DdpConnectionStatus> get connectionStatus => _meteor.status();
+  //Stream<String?> get authStateChanges => _meteor.userId();
+
   Stream<User?> get currentUserData {
     return _meteor.user().map((userMap) {
       if (userMap == null) return null;
@@ -20,15 +23,15 @@ class AuthService extends ChangeNotifier {
     });
   }
 
-  String? get currentUserId => _meteor.userIdCurrentValue();
-  
-  String? get currentUsername {
+  //String? get currentUserId => _meteor.userIdCurrentValue();
+
+  /* String? get currentUsername {
     final userDoc = _meteor.userCurrentValue();
     if (userDoc != null && userDoc.containsKey('username')) {
       return userDoc['username'] as String;
     }
     return null;
-  }
+  } */
 
   Future<bool> signInWithGoogle() async {
     try {
@@ -77,7 +80,6 @@ class AuthService extends ChangeNotifier {
         'googleNative': {'idToken': idToken},
       }).timeout(const Duration(seconds: 5));
       
-      notifyListeners();
       return true;
     } catch (e) {
       rethrow;
@@ -87,7 +89,6 @@ class AuthService extends ChangeNotifier {
   Future<void> loginWithEmail(String email, String password) async {
     try {
       await _meteor.loginWithPassword(email, password).timeout(const Duration(seconds: 10));
-      notifyListeners();
     } catch (e) {
       rethrow;
     }
@@ -107,17 +108,20 @@ class AuthService extends ChangeNotifier {
 
   Future<void> connect() async {
     _meteor.reconnect();
-    notifyListeners();
   }
 
   void disconnect() {
     _meteor.disconnect();
-    notifyListeners();
   }
 
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     _meteor.logout();
-    notifyListeners();
   }
+}
+
+@Riverpod(keepAlive: true)
+AuthRepository authRepository(Ref ref) {
+  final meteorClient = ref.watch(meteorClientProvider);
+  return AuthRepository(meteorClient);
 }

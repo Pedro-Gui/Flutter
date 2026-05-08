@@ -1,32 +1,26 @@
 import 'dart:async';
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todo_mongo/components/my_button.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
 import 'package:todo_mongo/components/square_tile.dart';
-import 'package:todo_mongo/services/auth_service.dart';
+import 'package:todo_mongo/services/auth/auth_controller.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   final void Function()? onTap;
   const RegisterPage({super.key, required this.onTap});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final usernameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
-  AuthService? authService;
   
-  @override
-  void initState() {
-    super.initState();
-    authService = Provider.of<AuthService>(context, listen: false);
-  }
 
   void onSignUserUp() async {
 
@@ -44,7 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      await authService!.createUserWithEmail(
+      await ref.read(authControllerProvider.notifier).createUserWithEmail(
         usernameController.text.trim(),
         emailController.text.trim(),
         passwordController.text,
@@ -94,7 +88,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      final success = await authService!.signInWithGoogle();
+      final success = await ref.read(authControllerProvider.notifier).signInWithGoogle();
 
       if (!mounted) return;
       Navigator.pop(context);

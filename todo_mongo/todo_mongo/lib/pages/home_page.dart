@@ -1,36 +1,32 @@
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:todo_mongo/components/my_drawer.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
 import 'package:todo_mongo/components/todo_tile.dart';
-import 'package:todo_mongo/services/auth_service.dart';
-import 'package:todo_mongo/services/task_model.dart';
-import 'package:todo_mongo/services/task_service.dart';
+import 'package:todo_mongo/models/task_model.dart';
+import 'package:todo_mongo/models/user_model.dart';
+import 'package:todo_mongo/services/auth/auth_controller.dart';
+import 'package:todo_mongo/services/task/task_controller.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  TaskService? taskService;
-  AuthService? authService;
+class _HomePageState extends ConsumerState<HomePage> {
   final TextEditingController controller = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    taskService = Provider.of<TaskService>(context, listen: false);
-    authService = Provider.of<AuthService>(context, listen: false);
-    taskService!.updateSubscribe();
-  
+  void dispose() {
+    controller.dispose();
+    super.dispose();
   }
 
-  void editOrAdd(bool isEdit, Task? task, BuildContext context) {
+  void _editOrAdd(bool isEdit, Task? task) {
     Navigator.pushNamed(
       context,
       '/createOrEditPage',
@@ -38,7 +34,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void showError(MeteorError e, BuildContext context) {
+  void _showError(MeteorError e) {
     String message = 'Ocorreu um erro inesperado.';
 
     final errorCode = e.error?.toLowerCase() ?? '';
@@ -61,7 +57,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void onDelete(String taskId, BuildContext context) {
+  void _onDelete(String taskId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -83,10 +79,10 @@ class _HomePageState extends State<HomePage> {
             ),
             onPressed: () async {
               try {
-                await taskService!.deleteTask(taskId);
+                await ref.read(taskControllerProvider.notifier).deleteTask(taskId);
               } on MeteorError catch (e) {
                 if (!context.mounted) return;
-                showError(e, context);
+                _showError(e);
                 Navigator.pop(context);
                 return;
               }
@@ -104,12 +100,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   void onChanged(String text) {
-    taskService!.setSearch(controller.text);
+    ref.read(taskControllerProvider.notifier).setSearch(controller.text);
   }
 
   @override
   Widget build(BuildContext context) {
+    final taskState = ref.watch(taskControllerProvider);
+
+    final userAsync = ref.watch(authControllerProvider);
     
+    final tasksAsync = ref.watch(tasksStreamProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -144,23 +145,13 @@ class _HomePageState extends State<HomePage> {
                     PopupMenuButton(
                       itemBuilder: (context) => [
                         PopupMenuItem(
-                          onTap: () {
-                            taskService!.toggleCompleted();
-                          },
-                          child: Text(
-                            taskService!.filter.hideCompleted
-                                ? 'Show Completed'
-                                : 'Hide Completed',
-                          ),
+                          onTap: () =>ref.read(taskControllerProvider.notifier).toggleCompleted(),
+                          child: Text(taskState.filter.hideCompleted ? 'Show Completed' : 'Hide Completed',)
                         ),
                         PopupMenuItem(
-                          onTap: () {
-                            taskService!.toggleSortByDate();
-                          },
+                          onTap: () => ref.read(taskControllerProvider.notifier).toggleSortByDate(),
                           child: Text(
-                            taskService!.filter.sortDescending
-                                ? 'Order: Oldest'
-                                : 'Order: Latest',
+                            taskState.filter.sortDescending ? 'Order: Oldest' : 'Order: Latest',
                           ),
                         ),
                       ],
@@ -168,106 +159,7 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
                 Expanded(
-                  child: StreamBuilder<List<Task>>(
-                    stream: taskService!.todoCollection,
-                    builder: (context, snapshot) {
-                      if (authService!.currentUserId == null) {
-                        return const Center(
-                          child: Text('Faça login para ver suas tarefas.'),
-                        );
-                      }
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(
-                          child: Text('Nenhuma tarefa encontrada.'),
-                        );
-                      }
-                
-                      final List<Task> dados = snapshot.data!;
-                
-                      if (dados.isEmpty) {
-                        return const Center(
-                          child: Text('Nenhuma tarefa encontrada no banco.'),
-                        );
-                      }
-                
-                      return Column(
-                        children: [
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: dados.length,
-                              itemBuilder: (context, index) {
-                                final task = dados[index];
-                                return ToDoTile(
-                                  taskName: task.title,
-                                  situacao: task.situacao,
-                                  userId: task.userId,
-                                  owner: task.ownerUsername,
-                                  onChanged: () async {
-                                    try {
-                                      await taskService!.updateSituacao(
-                                        task.id,
-                                        task.situacao,
-                                      );
-                                    } on MeteorError catch (e) {
-                                      if (!context.mounted) return;
-                                      showError(e, context);
-                                      return;
-                                    }
-                                  },
-                                  onDelete: () => onDelete(task.id, context),
-                                  onEdit: () => editOrAdd(true, task, context),
-                                );
-                              },
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                IconButton(
-                                  onPressed: () => taskService!.previousPage(),
-                                  icon: const Icon(Icons.chevron_left),
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
-                                    vertical: 8.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  child: Text(
-                                    'Page ${taskService!.filter.pagina}',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () => taskService!.nextPage(),
-                                  icon: const Icon(Icons.chevron_right),
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                  child: _buildTaskList(userAsync, tasksAsync),
                 ),
               ],
             ),
@@ -277,10 +169,90 @@ class _HomePageState extends State<HomePage> {
     
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          editOrAdd(false, null, context);
+          _editOrAdd(false, null);
         },
         child: const Icon(Icons.add),
       ),
+    );
+  }
+  Widget _buildTaskList(AsyncValue<User?> userAsync, AsyncValue<List<Task>> tasksAsync) {
+    if (userAsync.value == null) {
+      return const Center(child: Text('Faça login para ver suas tarefas.'));
+    }
+
+    return switch (tasksAsync) {
+      AsyncData(:final value) => _buildData(value),
+      AsyncError(:final error) => Center(child: Text('Erro: $error')),
+      _ => const Center(child: CircularProgressIndicator()),
+    };
+  }
+
+  Widget _buildData(List<Task> dados) {
+    if (dados.isEmpty) {
+      return const Center(child: Text('Nenhuma tarefa encontrada.'));
+    }
+
+    final taskState = ref.read(taskControllerProvider);
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: dados.length,
+            itemBuilder: (context, index) {
+              final task = dados[index];
+              return ToDoTile(
+                taskName: task.title,
+                situacao: task.situacao,
+                userId: task.userId,
+                owner: task.ownerUsername,
+                onChanged: () async {
+                  try {
+                    await ref.read(taskControllerProvider.notifier).updateSituacao(task.id, task.situacao);
+                  } on MeteorError catch (e) {
+                    if (mounted) _showError(e);
+                  }
+                },
+                onDelete: () => _onDelete(task.id),
+                onEdit: () => _editOrAdd(true, task),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                onPressed: () => ref.read(taskControllerProvider.notifier).previousPage(),
+                icon: const Icon(Icons.chevron_left),
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Text(
+                  'Page ${taskState.filter.pagina}',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () => ref.read(taskControllerProvider.notifier).nextPage(),
+                icon: const Icon(Icons.chevron_right),
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

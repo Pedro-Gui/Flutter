@@ -1,31 +1,16 @@
-import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todo_mongo/pages/create_edit_task.dart';
 import 'package:todo_mongo/pages/home_page.dart';
-import 'package:todo_mongo/services/auth_service.dart';
-import 'package:todo_mongo/services/login_or_register.dart';
+import 'package:todo_mongo/services/auth/login_or_register.dart';
 import 'package:todo_mongo/pages/profile_page.dart';
-import 'package:todo_mongo/services/auth_gate.dart';
-import 'package:todo_mongo/services/profile_service.dart';
-import 'package:todo_mongo/services/task_service.dart';
+import 'package:todo_mongo/services/auth/auth_gate.dart';
 import 'package:todo_mongo/themes/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  final meteorClient = MeteorClient.connect(url: 'ws://10.0.2.2:3000/websocket');
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthService(meteorClient)),
-        ChangeNotifierProvider(create: (_) => TaskService(meteorClient)),
-        ChangeNotifierProvider(create: (_) => ProfileService(meteorClient)),
-      ],
-      child: const MainApp(),
-    ),
-  );
+  runApp( const ProviderScope(child: MainApp(),)    );
 }
 
 class MainApp extends StatelessWidget {

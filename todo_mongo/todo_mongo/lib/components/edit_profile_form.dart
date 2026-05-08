@@ -1,20 +1,20 @@
 import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:todo_mongo/services/profile_service.dart';
-import 'package:todo_mongo/services/user_model.dart';
+import 'package:todo_mongo/models/user_model.dart';
+import 'package:todo_mongo/services/profile/profile_controller.dart';
 
-class EditProfileForm extends StatefulWidget {
+class EditProfileForm extends ConsumerStatefulWidget {
   final User user;
 
   const EditProfileForm({super.key, required this.user});
 
   @override
-  State<EditProfileForm> createState() => _EditProfileFormState();
+  ConsumerState<EditProfileForm> createState() => _EditProfileFormState();
 }
 
-class _EditProfileFormState extends State<EditProfileForm> {
+class _EditProfileFormState extends ConsumerState<EditProfileForm> {
   late final TextEditingController _usernameController;
   late final TextEditingController _firstnameController;
   late final TextEditingController _lastnameController;
@@ -94,7 +94,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
         'imagem': _base64Image, 
       };
 
-      await context.read<ProfileService>().editUserProfile(doc);
+      await ref.read(profileControllerProvider.notifier).editUserProfile(doc);
 
       if (!mounted) return;
       Navigator.pop(context);
