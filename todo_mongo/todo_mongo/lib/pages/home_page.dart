@@ -1,6 +1,7 @@
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:todo_mongo/components/my_drawer.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
@@ -27,11 +28,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _editOrAdd(bool isEdit, Task? task) {
-    Navigator.pushNamed(
-      context,
-      '/createOrEditPage',
-      arguments: {'isEdit': isEdit, 'task': task},
-    );
+    context.push('/task-detail', extra: {'isEdit': isEdit, 'task': task});
   }
 
   void _showError(MeteorError e) {
@@ -79,7 +76,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             onPressed: () async {
               try {
-                await ref.read(taskControllerProvider.notifier).deleteTask(taskId);
+                await ref
+                    .read(taskControllerProvider.notifier)
+                    .deleteTask(taskId);
               } on MeteorError catch (e) {
                 if (!context.mounted) return;
                 _showError(e);
@@ -108,7 +107,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final taskState = ref.watch(taskControllerProvider);
 
     final userAsync = ref.watch(authControllerProvider);
-    
+
     final tasksAsync = ref.watch(tasksStreamProvider);
 
     return Scaffold(
@@ -145,28 +144,36 @@ class _HomePageState extends ConsumerState<HomePage> {
                     PopupMenuButton(
                       itemBuilder: (context) => [
                         PopupMenuItem(
-                          onTap: () =>ref.read(taskControllerProvider.notifier).toggleCompleted(),
-                          child: Text(taskState.filter.hideCompleted ? 'Show Completed' : 'Hide Completed',)
+                          onTap: () => ref
+                              .read(taskControllerProvider.notifier)
+                              .toggleCompleted(),
+                          child: Text(
+                            taskState.filter.hideCompleted
+                                ? 'Show Completed'
+                                : 'Hide Completed',
+                          ),
                         ),
                         PopupMenuItem(
-                          onTap: () => ref.read(taskControllerProvider.notifier).toggleSortByDate(),
+                          onTap: () => ref
+                              .read(taskControllerProvider.notifier)
+                              .toggleSortByDate(),
                           child: Text(
-                            taskState.filter.sortDescending ? 'Order: Oldest' : 'Order: Latest',
+                            taskState.filter.sortDescending
+                                ? 'Order: Oldest'
+                                : 'Order: Latest',
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                Expanded(
-                  child: _buildTaskList(userAsync, tasksAsync),
-                ),
+                Expanded(child: _buildTaskList(userAsync, tasksAsync)),
               ],
             ),
           ),
         ),
       ),
-    
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _editOrAdd(false, null);
@@ -175,7 +182,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
   }
-  Widget _buildTaskList(AsyncValue<User?> userAsync, AsyncValue<List<Task>> tasksAsync) {
+
+  Widget _buildTaskList(
+    AsyncValue<User?> userAsync,
+    AsyncValue<List<Task>> tasksAsync,
+  ) {
     if (userAsync.value == null) {
       return const Center(child: Text('Faça login para ver suas tarefas.'));
     }
@@ -208,7 +219,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                 owner: task.ownerUsername,
                 onChanged: () async {
                   try {
-                    await ref.read(taskControllerProvider.notifier).updateSituacao(task.id, task.situacao);
+                    await ref
+                        .read(taskControllerProvider.notifier)
+                        .updateSituacao(task.id, task.situacao);
                   } on MeteorError catch (e) {
                     if (mounted) _showError(e);
                   }
@@ -225,12 +238,16 @@ class _HomePageState extends ConsumerState<HomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                onPressed: () => ref.read(taskControllerProvider.notifier).previousPage(),
+                onPressed: () =>
+                    ref.read(taskControllerProvider.notifier).previousPage(),
                 icon: const Icon(Icons.chevron_left),
                 color: Theme.of(context).colorScheme.primary,
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(8.0),
@@ -245,7 +262,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
               IconButton(
-                onPressed: () => ref.read(taskControllerProvider.notifier).nextPage(),
+                onPressed: () =>
+                    ref.read(taskControllerProvider.notifier).nextPage(),
                 icon: const Icon(Icons.chevron_right),
                 color: Theme.of(context).colorScheme.primary,
               ),

@@ -1,8 +1,7 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:todo_mongo/components/my_button.dart';
 import 'package:todo_mongo/components/my_switch.dart';
@@ -116,7 +115,7 @@ class _CreateEditTaskState extends ConsumerState<CreateEditTask> {
               borderRadius: BorderRadius.circular(12),
             ),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Cancel'),
           ),
@@ -136,8 +135,7 @@ class _CreateEditTaskState extends ConsumerState<CreateEditTask> {
                 privado: private,
                 userId: widget.isEdit ? widget.task!.userId : '',
                 ownerUsername:
-                    ref.read(authControllerProvider).value?.username ??
-                    'Desconhecido',
+                    ref.read(authControllerProvider).value?.username ?? '',
                 createdAt: widget.isEdit ? widget.task!.createdAt : null,
               );
               try {
@@ -150,15 +148,16 @@ class _CreateEditTaskState extends ConsumerState<CreateEditTask> {
                       .read(taskControllerProvider.notifier)
                       .addTask(tarefaParaSalvar);
                 }
-                if (!dialogContext.mounted) return;
-                Navigator.pop(dialogContext);
-                Navigator.pop(context);
-              } on MeteorError catch (e) {
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
                 if (mounted) {
-                  _showError(e);
-                  Navigator.pop(
-                    dialogContext,
-                  ); // Apenas fecha o Dialog em caso de erro
+                  context.pop();
+                }
+              } on MeteorError catch (e) {
+                _showError(e);
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
                 }
               }
             },
@@ -183,7 +182,7 @@ class _CreateEditTaskState extends ConsumerState<CreateEditTask> {
               borderRadius: BorderRadius.circular(12),
             ),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Cancel'),
           ),
@@ -197,12 +196,16 @@ class _CreateEditTaskState extends ConsumerState<CreateEditTask> {
                 await ref
                     .read(taskControllerProvider.notifier)
                     .deleteTask(widget.task!.id);
-                if (!dialogContext.mounted) return;
-                Navigator.pop(dialogContext);
-                Navigator.pop(context);
-              } on MeteorError catch (e) {
+
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
                 if (mounted) {
-                  _showError(e);
+                  context.pop();
+                }
+              } on MeteorError catch (e) {
+                _showError(e);
+                if (dialogContext.mounted) {
                   Navigator.pop(dialogContext);
                 }
               }
@@ -350,7 +353,7 @@ class _CreateEditTaskState extends ConsumerState<CreateEditTask> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () => context.go('/home'),
                       child: Text(
                         'Cancel ${widget.isEdit ? 'edit' : ' creation'}',
                         style: const TextStyle(

@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:dart_meteor/dart_meteor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:todo_mongo/components/my_button.dart';
 import 'package:todo_mongo/components/my_textfield.dart';
 import 'package:todo_mongo/components/square_tile.dart';
 import 'package:todo_mongo/services/auth/auth_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  final void Function()? onTap;
-  const LoginPage({super.key, required this.onTap});
+  const LoginPage({super.key});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -259,7 +259,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 5),
                     GestureDetector(
-                      onTap: widget.onTap,
+                      onTap: () => context.go('/register'),
                       child: const Text(
                         ' Register Now',
                         style: TextStyle(

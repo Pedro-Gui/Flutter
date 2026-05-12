@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:todo_mongo/services/auth/auth_controller.dart';
 import 'package:todo_mongo/models/user_model.dart';
 import 'package:todo_mongo/services/task/task_controller.dart';
@@ -41,8 +42,8 @@ class MyDrawer extends ConsumerWidget {
                     title: const Text('Home'),
                     leading: const Icon(Icons.home),
                     onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/homePage');
+                      context.pop(context);
+                      context.go('/home');
                     },
                   ),
                 ),
@@ -52,8 +53,8 @@ class MyDrawer extends ConsumerWidget {
                     title: const Text('Profile'),
                     leading: const Icon(Icons.person),
                     onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/profilePage');
+                      context.pop(context);
+                      context.go('/profile');
                     },
                   ),
                 ),
@@ -66,13 +67,11 @@ class MyDrawer extends ConsumerWidget {
                 title: const Text('logout'),
                 leading: const Icon(Icons.logout),
                 onTap: () {
-                  Navigator.pop(context);
+                  context.pop(context);
                   ref.invalidate(taskControllerProvider);
                   ref.invalidate(tasksStreamProvider);
                   ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  }
+                  
                 },
               ),
             ),
