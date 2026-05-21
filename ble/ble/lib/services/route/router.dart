@@ -1,7 +1,7 @@
+import 'package:ble/models/ble_sys_device.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../pages/ble_connected_page.dart';
 import '../../pages/ble_scanner_page.dart';
@@ -12,7 +12,8 @@ part 'router.g.dart';
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
   final bleStateNotifier = ValueNotifier<bool>(false);
-  ref.listen<BluetoothDevice?>(bleControllerProvider, (_, next) {
+  
+  ref.listen<SysBleDevice?>(bleControllerProvider, (_, next) {
     bleStateNotifier.value = next != null;
   });
 
@@ -39,10 +40,10 @@ GoRouter router(Ref ref) {
     redirect: (context, state) {
       final isConnected = ref.read(bleControllerProvider) != null;
       final isScannerRoute = state.uri.path == '/scanner';
+
       if (!isConnected && !isScannerRoute) {
         return '/scanner';
       }
-
       if (isConnected && isScannerRoute) {
         return '/connected';
       }

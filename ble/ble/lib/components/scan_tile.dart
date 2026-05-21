@@ -1,9 +1,9 @@
+import 'package:ble/models/ble_sys_device.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ScanTile extends StatelessWidget {
-  final ScanResult result;
+  final SysBleDevice result;
   final VoidCallback onTap;
 
   const ScanTile({super.key, required this.result, required this.onTap});
@@ -16,11 +16,11 @@ class ScanTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final deviceName = result.device.platformName.isNotEmpty
-        ? result.device.platformName
-        : 'Dispositivo Desconhecido';
+    final deviceName = result.name;
+    final String id = result.id;
+    final int rssi = result.rssi;
 
-    final Color signalColor = _getSignalColor(result.rssi);
+    final Color signalColor = _getSignalColor(rssi);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -76,7 +76,7 @@ class ScanTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    result.device.remoteId.str,
+                    id,
                     style: GoogleFonts.montserrat(
                       fontSize: 12,
                       color: Theme.of(

@@ -137,3 +137,6 @@ Accounts.registerLoginHandler('googleNative', async (loginRequest) => {
     throw new Meteor.Error(500, 'Falha interna ao processar o login via Google.');
   }
 });
+
+// $env:MONGO_URL="mongodb://localhost:27017/TODO"
+// meteor run

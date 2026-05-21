@@ -34,7 +34,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
 
       if (mounted) {
         setState(() {
-          _sliderValue = initialStep;
+          _sliderValue = initialStep.clamp(0.0, 1.0);
           _ledState = initialLed;
         });
       }
@@ -72,7 +72,8 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Senoide BLE'),
+        title: Text('Senoide BLE - ${ref.read(bleControllerProvider)?.name ?? 'Desconectado'}'),
+        centerTitle: true,
         actions: [
           IconButton(
             onPressed: () {
@@ -167,22 +168,43 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context,).colorScheme.primary, 
+                    ),
                     onPressed: () =>
                         ref.read(sineGraphDataProvider.notifier).start(),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start'),
+                    icon: Icon(
+                      Icons.play_arrow,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                    label: Text(
+                      'Start',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
                   ),
                   ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context,).colorScheme.primary, 
+                    ),
                     onPressed: () =>
                         ref.read(sineGraphDataProvider.notifier).stop(),
-                    icon: const Icon(Icons.stop),
-                    label: const Text('Stop'),
+                    icon:  Icon(Icons.stop,color: Theme.of(context).colorScheme.onPrimary,),
+                    label: Text('Stop',style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),),
                   ),
                   ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context,).colorScheme.primary, 
+                    ),
                     onPressed: () =>
                         ref.read(sineGraphDataProvider.notifier).flush(),
-                    icon: const Icon(Icons.delete_sweep),
-                    label: const Text('Flush'),
+                    icon:  Icon(Icons.delete_sweep,color: Theme.of(context).colorScheme.onPrimary,),
+                    label:  Text('Flush',style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),),
                   ),
                 ],
               ),
@@ -199,20 +221,74 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                         child: LineChart(
                           LineChartData(
                             gridData: const FlGridData(show: true),
-                            titlesData: const FlTitlesData(show: false),
                             borderData: FlBorderData(show: true),
+
+                            titlesData: FlTitlesData(
+                              show: true,
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              // EIXO X
+                              bottomTitles: AxisTitles(
+                                axisNameWidget: const Text(
+                                  'Amostras',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                axisNameSize: 22,
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 30,
+                                  getTitlesWidget: (value, meta) {
+                                    return SideTitleWidget(
+                                      meta: meta,
+                                      child: Text(
+                                        value.toInt().toString(),
+                                        style: const TextStyle(fontSize: 10),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              // EIXO Y
+                              leftTitles: AxisTitles(
+                                axisNameWidget: const Text(
+                                  'Amplitude',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                axisNameSize: 24,
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 40,
+                                  getTitlesWidget: (value, meta) {
+                                    return SideTitleWidget(
+                                      meta: meta,
+                                      child: Text(
+                                        value.toStringAsFixed(1),
+                                        style: const TextStyle(fontSize: 10),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
                             lineBarsData: [
                               LineChartBarData(
                                 spots: points,
-                                isCurved: true,
+                                isCurved: false,
                                 color: Colors.blue,
-                                barWidth: 3,
-                                isStrokeCapRound: true,
+                                barWidth: 2,
+                                isStrokeCapRound: false,
                                 dotData: const FlDotData(show: false),
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  color: Colors.blue.withValues(alpha: 0.2),
-                                ),
+                                belowBarData: BarAreaData(show: false),
                               ),
                             ],
                           ),
@@ -228,10 +304,13 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
               child: Row(
                 children: [
                   ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context,).colorScheme.primary, 
+                    ),
                     onPressed: () async {
                       await ref
                           .read(bleControllerProvider.notifier)
-                          .toggleLed();
+                          .setLed(!_ledState);
 
                       setState(() {
                         _ledState = !_ledState;
@@ -239,8 +318,11 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                     },
                     icon: Icon(
                       _ledState ? Icons.light_mode : Icons.light_mode_outlined,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
-                    label: const Text('Toggle LED'),
+                    label: Text('Toggle LED',style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),),
                   ),
 
                   const SizedBox(width: 16),
@@ -249,7 +331,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                     child: Slider(
                       min: 0,
                       max: 1,
-                      value: _sliderValue,
+                      value: _sliderValue.clamp(0.0, 1.0),
                       showValueIndicator: ShowValueIndicator.alwaysVisible,
                       activeColor: Theme.of(context).colorScheme.primary,
                       inactiveColor: Theme.of(

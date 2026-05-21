@@ -1,32 +1,40 @@
 import 'dart:async';
+
+import 'package:ble/models/ble_sys_device.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:universal_ble/universal_ble.dart';
+
 import 'ble_repository.dart';
 
 part 'ble_controller.g.dart';
 
 @Riverpod(keepAlive: true)
-BleRepository bleRepository(Ref ref) => const BleRepository();
+BleRepository bleRepository(Ref ref) {
+  final repository = BleRepository();
+  ref.onDispose(() {
+    repository.dispose();
+  });
+  return repository;
+}
 
-/// Controladora de conexão com o dispositivo BLE  ESP32_sin
 @Riverpod(keepAlive: true)
 class BleController extends _$BleController {
-  StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
+  StreamSubscription<BleConnectionState>? _connectionSubscription;
 
   @override
-  BluetoothDevice? build() {
+  SysBleDevice? build() {
     ref.onDispose(() {
       _connectionSubscription?.cancel();
     });
     return null;
   }
 
-  Future<void> connect(BluetoothDevice device) async {
+  Future<void> connect(SysBleDevice device) async {
     final repository = ref.read(bleRepositoryProvider);
 
     try {
-      await repository.connect(device);
+      await repository.connect(device.id);
       state = device;
       _listenToConnectionChanges(device);
     } catch (e) {
@@ -35,14 +43,14 @@ class BleController extends _$BleController {
     }
   }
 
-  void _listenToConnectionChanges(BluetoothDevice device) {
+  void _listenToConnectionChanges(SysBleDevice device) {
     _connectionSubscription?.cancel();
 
     _connectionSubscription = ref
         .read(bleRepositoryProvider)
-        .connectionStateStream(device)
+        .connectionStateStream(device.id)
         .listen((connectionState) {
-          if (connectionState == BluetoothConnectionState.disconnected) {
+          if (connectionState == BleConnectionState.disconnected) {
             state = null;
             _connectionSubscription?.cancel();
           }
@@ -53,32 +61,32 @@ class BleController extends _$BleController {
     final device = state;
     if (device == null) return;
 
-    await ref.read(bleRepositoryProvider).disconnect(device);
+    await ref.read(bleRepositoryProvider).disconnect(device.id);
     _connectionSubscription?.cancel();
     state = null;
   }
 
   Future<double> getStep() async {
     final device = _ensureConnected();
-    return await ref.read(bleRepositoryProvider).readStep(device);
+    return await ref.read(bleRepositoryProvider).readStep(device.id);
   }
 
   Future<bool> getLedState() async {
     final device = _ensureConnected();
-    return await ref.read(bleRepositoryProvider).readLedState(device);
+    return await ref.read(bleRepositoryProvider).readLedState(device.id);
   }
 
-  Future<void> toggleLed() {
+  Future<void> setLed(bool turnOn) async {
     final device = _ensureConnected();
-    return ref.read(bleRepositoryProvider).writeLedState(device);
+    await ref.read(bleRepositoryProvider).writeLedState(device.id, turnOn);
   }
 
   Future<void> setStep(double step) {
     final device = _ensureConnected();
-    return ref.read(bleRepositoryProvider).writeStep(device, step);
+    return ref.read(bleRepositoryProvider).writeStep(device.id, step);
   }
 
-  BluetoothDevice _ensureConnected() {
+  SysBleDevice _ensureConnected() {
     final device = state;
     if (device == null) {
       throw StateError('Tentativa de operação BLE sem dispositivo conectado.');
@@ -87,19 +95,19 @@ class BleController extends _$BleController {
   }
 }
 
-/// Expõe a situação do scan BLE
+/// Expõe a situação do scan BLE.
 @riverpod
 Stream<bool> isBleScanning(Ref ref) {
   return ref.watch(bleRepositoryProvider).isScanning;
 }
 
-/// Controladora de varredura de dispositivos BLE
+/// Controladora de varredura de dispositivos BLE.
 @riverpod
 class BleScanner extends _$BleScanner {
   BleRepository get _repository => ref.read(bleRepositoryProvider);
 
   @override
-  Stream<List<ScanResult>> build() {
+  Stream<List<SysBleDevice>> build() {
     return _repository.scanResults;
   }
 
@@ -120,18 +128,23 @@ class BleScanner extends _$BleScanner {
   }
 }
 
+/// Controladora de streaming de dados em tempo real da Senoide.
 @riverpod
 class SineGraphData extends _$SineGraphData {
   late BleRepository _repository;
-  late BluetoothDevice? _device;
+  late SysBleDevice? _device;
 
   StreamSubscription<double>? _subscription;
+  Timer? _renderTimer;
+
   double _xCounter = 0;
+
+  final List<FlSpot> _internalBuffer = [];
 
   @override
   List<FlSpot> build() {
     _repository = ref.read(bleRepositoryProvider);
-    _device = ref.read(bleControllerProvider);
+    _device = ref.watch(bleControllerProvider);
 
     ref.onDispose(() {
       stop();
@@ -141,18 +154,31 @@ class SineGraphData extends _$SineGraphData {
 
   Future<void> start() async {
     if (_device == null) return;
-    await _subscription?.cancel();
 
-    await _repository.setSineNotifications(_device!, true);
-    _subscription = _repository.subscribeToSine(_device!).listen((yValue) {
+    await stop();
+    _renderTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
+      if (_internalBuffer.isNotEmpty && ref.mounted) {
+        state = List.from(_internalBuffer);
+      }
+    });
+
+    await _repository.setSineNotifications(_device!.id, true);
+    
+    _subscription = _repository.subscribeToSine(_device!.id).listen((yValue) {
       if (!ref.mounted) return;
       _addPoint(yValue);
     });
   }
 
   Future<void> stop() async {
+    _renderTimer?.cancel();
+    _renderTimer = null;
+
     if (_device != null) {
-      await _repository.setSineNotifications(_device!, false);
+      try {
+        await _repository.setSineNotifications(_device!.id, false);
+      } catch (_) {
+      }
     }
 
     await _subscription?.cancel();
@@ -160,16 +186,13 @@ class SineGraphData extends _$SineGraphData {
   }
 
   void flush() {
+    _internalBuffer.clear();
     state = [];
     _xCounter = 0;
   }
 
   void _addPoint(double yValue) {
-    if (!ref.mounted) return;
     _xCounter += 1;
-    final currentSpots = List<FlSpot>.from(state);
-    currentSpots.add(FlSpot(_xCounter, yValue));
-
-    state = currentSpots;
+    _internalBuffer.add(FlSpot(_xCounter, yValue));
   }
 }

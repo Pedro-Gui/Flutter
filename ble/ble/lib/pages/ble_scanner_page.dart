@@ -70,7 +70,7 @@ class _BleScannerPageState extends ConsumerState<BleScannerPage> {
                     ref.read(bleScannerProvider.notifier).stopScan();
                     ref
                         .read(bleControllerProvider.notifier)
-                        .connect(scanResult.device);
+                        .connect(scanResult);
                   },
                 );
               },
@@ -84,7 +84,7 @@ class _BleScannerPageState extends ConsumerState<BleScannerPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: isScanning
             ? () => ref.read(bleScannerProvider.notifier).stopScan()
-            : () => ref.read(bleScannerProvider.notifier).startScan(),
+            : () =>  _checkPermissionsAndScan(),
         backgroundColor: isScanning
             ? Colors.red
             : Theme.of(context).colorScheme.primary,

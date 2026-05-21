@@ -48,17 +48,13 @@ final class BleRepositoryProvider
   }
 }
 
-String _$bleRepositoryHash() => r'f92c1235ae5bdf09ce867ad2d00a433049c2ae1a';
-
-/// Controladora de conexão com o dispositivo BLE  ESP32_sin
+String _$bleRepositoryHash() => r'f3f568b099dd27a7f8446a37b995b58f7e00d510';
 
 @ProviderFor(BleController)
 final bleControllerProvider = BleControllerProvider._();
 
-/// Controladora de conexão com o dispositivo BLE  ESP32_sin
 final class BleControllerProvider
-    extends $NotifierProvider<BleController, BluetoothDevice?> {
-  /// Controladora de conexão com o dispositivo BLE  ESP32_sin
+    extends $NotifierProvider<BleController, SysBleDevice?> {
   BleControllerProvider._()
     : super(
         from: null,
@@ -78,29 +74,27 @@ final class BleControllerProvider
   BleController create() => BleController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(BluetoothDevice? value) {
+  Override overrideWithValue(SysBleDevice? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<BluetoothDevice?>(value),
+      providerOverride: $SyncValueProvider<SysBleDevice?>(value),
     );
   }
 }
 
-String _$bleControllerHash() => r'e545bb8b8707d060c9b193a0ad25db890599c5c4';
+String _$bleControllerHash() => r'13b11fc2719e0e4121a933f03dad6dee287f5837';
 
-/// Controladora de conexão com o dispositivo BLE  ESP32_sin
-
-abstract class _$BleController extends $Notifier<BluetoothDevice?> {
-  BluetoothDevice? build();
+abstract class _$BleController extends $Notifier<SysBleDevice?> {
+  SysBleDevice? build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<BluetoothDevice?, BluetoothDevice?>;
+    final ref = this.ref as $Ref<SysBleDevice?, SysBleDevice?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<BluetoothDevice?, BluetoothDevice?>,
-              BluetoothDevice?,
+              AnyNotifier<SysBleDevice?, SysBleDevice?>,
+              SysBleDevice?,
               Object?,
               Object?
             >;
@@ -108,17 +102,17 @@ abstract class _$BleController extends $Notifier<BluetoothDevice?> {
   }
 }
 
-/// Expõe a situação do scan BLE
+/// Expõe a situação do scan BLE.
 
 @ProviderFor(isBleScanning)
 final isBleScanningProvider = IsBleScanningProvider._();
 
-/// Expõe a situação do scan BLE
+/// Expõe a situação do scan BLE.
 
 final class IsBleScanningProvider
     extends $FunctionalProvider<AsyncValue<bool>, bool, Stream<bool>>
     with $FutureModifier<bool>, $StreamProvider<bool> {
-  /// Expõe a situação do scan BLE
+  /// Expõe a situação do scan BLE.
   IsBleScanningProvider._()
     : super(
         from: null,
@@ -146,15 +140,15 @@ final class IsBleScanningProvider
 
 String _$isBleScanningHash() => r'89549ab49b63b834e98ba7099042de18cc228a3c';
 
-/// Controladora de varredura de dispositivos BLE
+/// Controladora de varredura de dispositivos BLE.
 
 @ProviderFor(BleScanner)
 final bleScannerProvider = BleScannerProvider._();
 
-/// Controladora de varredura de dispositivos BLE
+/// Controladora de varredura de dispositivos BLE.
 final class BleScannerProvider
-    extends $StreamNotifierProvider<BleScanner, List<ScanResult>> {
-  /// Controladora de varredura de dispositivos BLE
+    extends $StreamNotifierProvider<BleScanner, List<SysBleDevice>> {
+  /// Controladora de varredura de dispositivos BLE.
   BleScannerProvider._()
     : super(
         from: null,
@@ -174,22 +168,22 @@ final class BleScannerProvider
   BleScanner create() => BleScanner();
 }
 
-String _$bleScannerHash() => r'62b932ed21e4a774e80808f26b72a92a095f1f81';
+String _$bleScannerHash() => r'7b9b422b1ba6bfb0a44fea7011bb5813531502fa';
 
-/// Controladora de varredura de dispositivos BLE
+/// Controladora de varredura de dispositivos BLE.
 
-abstract class _$BleScanner extends $StreamNotifier<List<ScanResult>> {
-  Stream<List<ScanResult>> build();
+abstract class _$BleScanner extends $StreamNotifier<List<SysBleDevice>> {
+  Stream<List<SysBleDevice>> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final ref =
-        this.ref as $Ref<AsyncValue<List<ScanResult>>, List<ScanResult>>;
+        this.ref as $Ref<AsyncValue<List<SysBleDevice>>, List<SysBleDevice>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<List<ScanResult>>, List<ScanResult>>,
-              AsyncValue<List<ScanResult>>,
+              AnyNotifier<AsyncValue<List<SysBleDevice>>, List<SysBleDevice>>,
+              AsyncValue<List<SysBleDevice>>,
               Object?,
               Object?
             >;
@@ -197,11 +191,15 @@ abstract class _$BleScanner extends $StreamNotifier<List<ScanResult>> {
   }
 }
 
+/// Controladora de streaming de dados em tempo real da Senoide.
+
 @ProviderFor(SineGraphData)
 final sineGraphDataProvider = SineGraphDataProvider._();
 
+/// Controladora de streaming de dados em tempo real da Senoide.
 final class SineGraphDataProvider
     extends $NotifierProvider<SineGraphData, List<FlSpot>> {
+  /// Controladora de streaming de dados em tempo real da Senoide.
   SineGraphDataProvider._()
     : super(
         from: null,
@@ -229,7 +227,9 @@ final class SineGraphDataProvider
   }
 }
 
-String _$sineGraphDataHash() => r'2d4fa4f3ec2cad1180402d78ff27d1286b209636';
+String _$sineGraphDataHash() => r'463505f7ab43dd2410e50d3240045799b626c2ec';
+
+/// Controladora de streaming de dados em tempo real da Senoide.
 
 abstract class _$SineGraphData extends $Notifier<List<FlSpot>> {
   List<FlSpot> build();
