@@ -227,7 +227,7 @@ final class SineGraphDataProvider
   }
 }
 
-String _$sineGraphDataHash() => r'463505f7ab43dd2410e50d3240045799b626c2ec';
+String _$sineGraphDataHash() => r'a7c840fd3b38a7ca26651782227f80d978b44b05';
 
 /// Controladora de streaming de dados em tempo real da Senoide.
 

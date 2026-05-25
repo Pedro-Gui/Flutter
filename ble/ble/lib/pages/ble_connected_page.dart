@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:ble/components/size_spinner.dart';
 import 'package:ble/services/ble/ble_controller.dart';
 import 'package:ble/services/export/export_service.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -17,7 +18,9 @@ class BleConnectedPage extends ConsumerStatefulWidget {
 class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
   double _sliderValue = 0.0;
   bool _ledState = false;
+  int _windowValue = 0;
   final GlobalKey _chartKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -32,10 +35,14 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
       final initialStep = await controller.getStep();
       final initialLed = await controller.getLedState();
 
+      final notifier = ref.read(sineGraphDataProvider.notifier);
+      final initialWindowValue = notifier.windowSize;
+
       if (mounted) {
         setState(() {
           _sliderValue = initialStep.clamp(0.0, 1.0);
           _ledState = initialLed;
+          _windowValue = initialWindowValue;
         });
       }
     } catch (e) {
@@ -72,7 +79,9 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Senoide BLE - ${ref.read(bleControllerProvider)?.name ?? 'Desconectado'}'),
+        title: Text(
+          'Senoide BLE - ${ref.read(bleControllerProvider)?.name ?? 'Desconectado'}',
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -86,7 +95,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
             icon: const Icon(Icons.share),
             tooltip: 'Exportar Dados',
             onSelected: (String format) async {
-              final points = ref.read(sineGraphDataProvider);
+              final points = ref.read(sineGraphDataProvider.notifier).history;
 
               if (points.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -95,7 +104,8 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                 return;
               }
               try {
-                if (format == 'Matlab')await ExportService.exportToMatlab(points);
+                if (format == 'Matlab')
+                  await ExportService.exportToMatlab(points);
                 if (format == 'txt') await ExportService.exportToTxt(points);
                 if (format == 'xml') await ExportService.exportToXml(points);
                 if (format == 'pdf') {
@@ -164,47 +174,82 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
             // --- Painel de Controle do Gráfico ---
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Column(
                 children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context,).colorScheme.primary, 
-                    ),
-                    onPressed: () =>
-                        ref.read(sineGraphDataProvider.notifier).start(),
-                    icon: Icon(
-                      Icons.play_arrow,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                    label: Text(
-                      'Start',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                        ),
+                        onPressed: () =>
+                            ref.read(sineGraphDataProvider.notifier).start(),
+                        icon: Icon(
+                          Icons.play_arrow,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                        label: Text(
+                          'Start',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
                       ),
-                    ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                        ),
+                        onPressed: () =>
+                            ref.read(sineGraphDataProvider.notifier).stop(),
+                        icon: Icon(
+                          Icons.stop,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                        label: Text(
+                          'Stop',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                        ),
+                        onPressed: () =>
+                            ref.read(sineGraphDataProvider.notifier).flush(),
+                        icon: Icon(
+                          Icons.delete_sweep,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                        label: Text(
+                          'Flush',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context,).colorScheme.primary, 
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: SizeSpinner(
+                      value: _windowValue,
+                      maxValue: points.isNotEmpty ? points.last.x.toInt() : 100,
+                      onSubmitted: (x) {
+                        ref.read(sineGraphDataProvider.notifier).setWindowSize(x);
+                        setState(() {
+                          _windowValue = x;
+                        });
+                      },
                     ),
-                    onPressed: () =>
-                        ref.read(sineGraphDataProvider.notifier).stop(),
-                    icon:  Icon(Icons.stop,color: Theme.of(context).colorScheme.onPrimary,),
-                    label: Text('Stop',style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),),
-                  ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context,).colorScheme.primary, 
-                    ),
-                    onPressed: () =>
-                        ref.read(sineGraphDataProvider.notifier).flush(),
-                    icon:  Icon(Icons.delete_sweep,color: Theme.of(context).colorScheme.onPrimary,),
-                    label:  Text('Flush',style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),),
                   ),
                 ],
               ),
@@ -305,7 +350,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                 children: [
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context,).colorScheme.primary, 
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                     ),
                     onPressed: () async {
                       await ref
@@ -320,9 +365,12 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                       _ledState ? Icons.light_mode : Icons.light_mode_outlined,
                       color: Theme.of(context).colorScheme.onPrimary,
                     ),
-                    label: Text('Toggle LED',style: TextStyle(
+                    label: Text(
+                      'Toggle LED',
+                      style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimary,
-                      ),),
+                      ),
+                    ),
                   ),
 
                   const SizedBox(width: 16),

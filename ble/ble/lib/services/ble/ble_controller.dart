@@ -137,18 +137,17 @@ class SineGraphData extends _$SineGraphData {
   StreamSubscription<double>? _subscription;
   Timer? _renderTimer;
 
-  double _xCounter = 0;
+  int _xCounter = 0;
 
-  final List<FlSpot> _internalBuffer = [];
-
+  final List<FlSpot> _allPoints = [];
+  int _windowSize = 500;
+  
   @override
   List<FlSpot> build() {
     _repository = ref.read(bleRepositoryProvider);
     _device = ref.watch(bleControllerProvider);
 
-    ref.onDispose(() {
-      stop();
-    });
+    ref.onDispose(stop);
     return [];
   }
 
@@ -156,18 +155,24 @@ class SineGraphData extends _$SineGraphData {
     if (_device == null) return;
 
     await stop();
+
     _renderTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
-      if (_internalBuffer.isNotEmpty && ref.mounted) {
-        state = List.from(_internalBuffer);
+      if (ref.mounted) {
+        state = _getVisibleWindow();
       }
     });
 
     await _repository.setSineNotifications(_device!.id, true);
-    
+
     _subscription = _repository.subscribeToSine(_device!.id).listen((yValue) {
       if (!ref.mounted) return;
       _addPoint(yValue);
     });
+  }
+
+  List<FlSpot> _getVisibleWindow() {
+    if (_allPoints.length <= _windowSize) return List.unmodifiable(_allPoints);
+    return List.unmodifiable(_allPoints.sublist(_allPoints.length - _windowSize));
   }
 
   Future<void> stop() async {
@@ -177,8 +182,7 @@ class SineGraphData extends _$SineGraphData {
     if (_device != null) {
       try {
         await _repository.setSineNotifications(_device!.id, false);
-      } catch (_) {
-      }
+      } catch (_) {}
     }
 
     await _subscription?.cancel();
@@ -186,13 +190,24 @@ class SineGraphData extends _$SineGraphData {
   }
 
   void flush() {
-    _internalBuffer.clear();
+    _allPoints.clear();
     state = [];
     _xCounter = 0;
   }
 
   void _addPoint(double yValue) {
     _xCounter += 1;
-    _internalBuffer.add(FlSpot(_xCounter, yValue));
+    _allPoints.add(FlSpot(_xCounter.toDouble(), yValue));
   }
+
+  void setWindowSize(int size) {
+    if (size <= 0) return;
+    _windowSize = size;
+    if (size > _xCounter) _windowSize = _xCounter;
+    
+    state = _getVisibleWindow();
+  }
+
+  List<FlSpot> get history => List.unmodifiable(_allPoints);
+  int get windowSize => _windowSize;
 }
