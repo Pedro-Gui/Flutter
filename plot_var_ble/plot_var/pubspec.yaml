@@ -1,0 +1,33 @@
+name: plot_ble
+description: "Plot a ble notify."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  build_runner: ^2.15.0
+  fl_chart: ^1.2.0
+  flutter:
+    sdk: flutter
+  universal_ble: ^2.0.0
+  flutter_riverpod: ^3.3.1
+  go_router: ^17.2.3
+  google_fonts: ^8.1.0
+  path_provider: ^2.1.5
+  pdf: ^3.12.0
+  permission_handler: ^12.0.1
+  riverpod: ^3.2.1
+  riverpod_annotation: ^4.0.2
+  riverpod_generator: ^4.0.3
+  share_plus: ^13.1.0
+  device_info_plus: ^13.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
