@@ -8,14 +8,9 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-// --- Variáveis globais  ---
-extern BLECharacteristic* TX_SIN;
-extern bool deviceConnected;
-extern bool oldDeviceConnected;
-extern float step; 
-
 // --- Funções Públicas ---
-void inicializarBluetooth();
+void initBluetooth(double* p_h, unsigned int* p_m, double* b, double* a, int* updateOk);
+void sendData(unsigned long t_atual, double yk, double yc, double yf, double ya);
 void gerenciarReconexaoBluetooth();
 
 #endif
