@@ -201,7 +201,7 @@ void loop() {
 
   if (updateOk == 1) {
     atualizaCompensador(p_h, p_m, b, a);
-    updateOk = 0;
+    sync_updateOK(0);
   }
   //=== Fim do TOC: Tempo OCioso =======================================
 

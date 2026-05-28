@@ -82,7 +82,7 @@ final class BleControllerProvider
   }
 }
 
-String _$bleControllerHash() => r'13b11fc2719e0e4121a933f03dad6dee287f5837';
+String _$bleControllerHash() => r'a042c292b56d809f8a69d553a332c99badab9aef';
 
 abstract class _$BleController extends $Notifier<SysBleDevice?> {
   SysBleDevice? build();
@@ -191,15 +191,15 @@ abstract class _$BleScanner extends $StreamNotifier<List<SysBleDevice>> {
   }
 }
 
-/// Controladora de streaming de dados em tempo real da Senoide.
+/// Controladora de streaming de dados em tempo real para o grafico.
 
 @ProviderFor(SineGraphData)
 final sineGraphDataProvider = SineGraphDataProvider._();
 
-/// Controladora de streaming de dados em tempo real da Senoide.
+/// Controladora de streaming de dados em tempo real para o grafico.
 final class SineGraphDataProvider
-    extends $NotifierProvider<SineGraphData, List<FlSpot>> {
-  /// Controladora de streaming de dados em tempo real da Senoide.
+    extends $NotifierProvider<SineGraphData, Map<String, List<FlSpot>>> {
+  /// Controladora de streaming de dados em tempo real para o grafico.
   SineGraphDataProvider._()
     : super(
         from: null,
@@ -219,29 +219,30 @@ final class SineGraphDataProvider
   SineGraphData create() => SineGraphData();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<FlSpot> value) {
+  Override overrideWithValue(Map<String, List<FlSpot>> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<List<FlSpot>>(value),
+      providerOverride: $SyncValueProvider<Map<String, List<FlSpot>>>(value),
     );
   }
 }
 
-String _$sineGraphDataHash() => r'a7c840fd3b38a7ca26651782227f80d978b44b05';
+String _$sineGraphDataHash() => r'1e897616c6467bb3d6b84690aa4bc0fbe4eeb556';
 
-/// Controladora de streaming de dados em tempo real da Senoide.
+/// Controladora de streaming de dados em tempo real para o grafico.
 
-abstract class _$SineGraphData extends $Notifier<List<FlSpot>> {
-  List<FlSpot> build();
+abstract class _$SineGraphData extends $Notifier<Map<String, List<FlSpot>>> {
+  Map<String, List<FlSpot>> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<List<FlSpot>, List<FlSpot>>;
+    final ref =
+        this.ref as $Ref<Map<String, List<FlSpot>>, Map<String, List<FlSpot>>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<List<FlSpot>, List<FlSpot>>,
-              List<FlSpot>,
+              AnyNotifier<Map<String, List<FlSpot>>, Map<String, List<FlSpot>>>,
+              Map<String, List<FlSpot>>,
               Object?,
               Object?
             >;

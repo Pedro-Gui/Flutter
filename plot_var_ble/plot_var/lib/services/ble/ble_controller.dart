@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:ffi';
 
 import 'package:plot_ble/models/ble_sys_device.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:plot_ble/services/ble/ble_uuids.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -66,24 +68,50 @@ class BleController extends _$BleController {
     state = null;
   }
 
-  Future<double> getStep() async {
+  Future<double> getH() async {
     final device = _ensureConnected();
-    return await ref.read(bleRepositoryProvider).readStep(device.id);
+    return await ref
+        .read(bleRepositoryProvider)
+        .readCharacteristic<double>(
+          device.id,
+          BleUUIDs.CONTROL_UUID,
+          BleUUIDs.H_UUID,
+        );
   }
 
   Future<bool> getLedState() async {
     final device = _ensureConnected();
-    return await ref.read(bleRepositoryProvider).readLedState(device.id);
+    return await ref
+        .read(bleRepositoryProvider)
+        .readCharacteristic<bool>(
+          device.id,
+          BleUUIDs.LED_ACTUATOR_UUID,
+          BleUUIDs.LED_CARAC_UUID,
+        );
   }
 
   Future<void> setLed(bool turnOn) async {
     final device = _ensureConnected();
-    await ref.read(bleRepositoryProvider).writeLedState(device.id, turnOn);
+    await ref
+        .read(bleRepositoryProvider)
+        .writeOnCaracteristic<bool>(
+          device.id,
+          BleUUIDs.LED_ACTUATOR_UUID,
+          BleUUIDs.LED_CARAC_UUID,
+          turnOn,
+        );
   }
 
-  Future<void> setStep(double step) {
+  Future<void> setH(double h) {
     final device = _ensureConnected();
-    return ref.read(bleRepositoryProvider).writeStep(device.id, step);
+    return ref
+        .read(bleRepositoryProvider)
+        .writeOnCaracteristic<double>(
+          device.id,
+          BleUUIDs.CONTROL_UUID,
+          BleUUIDs.H_UUID,
+          h,
+        );
   }
 
   SysBleDevice _ensureConnected() {
@@ -128,32 +156,46 @@ class BleScanner extends _$BleScanner {
   }
 }
 
-/// Controladora de streaming de dados em tempo real da Senoide.
+/// Controladora de streaming de dados em tempo real para o grafico.
 @riverpod
 class SineGraphData extends _$SineGraphData {
   late BleRepository _repository;
   late SysBleDevice? _device;
 
-  StreamSubscription<double>? _subscription;
+  final List<StreamSubscription> _subscriptions = [];
   Timer? _renderTimer;
 
-  int _xCounter = 0;
-
-  final List<FlSpot> _allPoints = [];
+  // Janela móvel de plotagem.
   int _windowSize = 500;
-  
+  int get windowSize => _windowSize;
+  // Buffer de auxiliares
+  int? _currentT;
+  double? _currentYk;
+  double? _currentYc;
+  double? _currentYf;
+  double? _currentYa;
+
+  // Histórico de pontos por linha
+  final List<FlSpot> _ykPoints = [];
+  final List<FlSpot> _ycPoints = [];
+  final List<FlSpot> _yfPoints = [];
+  final List<FlSpot> _yaPoints = [];
+
   @override
-  List<FlSpot> build() {
+  Map<String, List<FlSpot>> build() {
     _repository = ref.read(bleRepositoryProvider);
     _device = ref.watch(bleControllerProvider);
 
     ref.onDispose(stop);
-    return [];
+    return _getEmptyState();
+  }
+
+  Map<String, List<FlSpot>> _getEmptyState() {
+    return {'yk': [], 'yc': [], 'yf': [], 'ya': []};
   }
 
   Future<void> start() async {
     if (_device == null) return;
-
     await stop();
 
     _renderTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
@@ -162,17 +204,107 @@ class SineGraphData extends _$SineGraphData {
       }
     });
 
-    await _repository.setSineNotifications(_device!.id, true);
+    final deviceId = _device!.id;
 
-    _subscription = _repository.subscribeToSine(_device!.id).listen((yValue) {
-      if (!ref.mounted) return;
-      _addPoint(yValue);
-    });
+    await _enableNotifications(deviceId, true);
+
+    _subscriptions.add(
+      _repository
+          .subscribeToCarac<int>(
+            deviceId,
+            BleUUIDs.SAMPLE_UUID,
+            BleUUIDs.T_UUID,
+          )
+          .listen((val) {
+            _processSample(t: val);
+          }),
+    );
+
+    _subscriptions.add(
+      _repository
+          .subscribeToCarac<double>(
+            deviceId,
+            BleUUIDs.SAMPLE_UUID,
+            BleUUIDs.YK_UUID,
+          )
+          .listen((val) {
+            _processSample(yk: val);
+          }),
+    );
+
+    _subscriptions.add(
+      _repository
+          .subscribeToCarac<double>(
+            deviceId,
+            BleUUIDs.SAMPLE_UUID,
+            BleUUIDs.YC_UUID,
+          )
+          .listen((val) {
+            _processSample(yc: val);
+          }),
+    );
+
+    _subscriptions.add(
+      _repository
+          .subscribeToCarac<double>(
+            deviceId,
+            BleUUIDs.SAMPLE_UUID,
+            BleUUIDs.YF_UUID,
+          )
+          .listen((val) {
+            _processSample(yf: val);
+          }),
+    );
+
+    _subscriptions.add(
+      _repository
+          .subscribeToCarac<double>(
+            deviceId,
+            BleUUIDs.SAMPLE_UUID,
+            BleUUIDs.YA_UUID,
+          )
+          .listen((val) {
+            _processSample(ya: val);
+          }),
+    );
   }
 
-  List<FlSpot> _getVisibleWindow() {
-    if (_allPoints.length <= _windowSize) return List.unmodifiable(_allPoints);
-    return List.unmodifiable(_allPoints.sublist(_allPoints.length - _windowSize));
+  void _processSample({
+    int? t,
+    double? yk,
+    double? yc,
+    double? yf,
+    double? ya,
+  }) {
+    if (t != null) {
+      if (_currentT != null) {
+        final double tAux = _currentT!.toDouble();
+        _ykPoints.add(FlSpot(tAux, _currentYk ?? 0.0));
+        _ycPoints.add(FlSpot(tAux, _currentYc ?? 0.0));
+        _yfPoints.add(FlSpot(tAux, _currentYf ?? 0.0));
+        _yaPoints.add(FlSpot(tAux, _currentYa ?? 0.0));
+      }
+      _currentT = t;
+    }
+
+    if (yk != null) _currentYk = yk;
+    if (yc != null) _currentYc = yc;
+    if (yf != null) _currentYf = yf;
+    if (ya != null) _currentYa = ya;
+  }
+
+  Map<String, List<FlSpot>> _getVisibleWindow() {
+    return {
+      'yk': _sliceWindow(_ykPoints),
+      'yc': _sliceWindow(_ycPoints),
+      'yf': _sliceWindow(_yfPoints),
+      'ya': _sliceWindow(_yaPoints),
+    };
+  }
+
+  List<FlSpot> _sliceWindow(List<FlSpot> list) {
+    if (list.length <= _windowSize) return List.unmodifiable(list);
+    return List.unmodifiable(list.sublist(list.length - _windowSize));
   }
 
   Future<void> stop() async {
@@ -181,33 +313,61 @@ class SineGraphData extends _$SineGraphData {
 
     if (_device != null) {
       try {
-        await _repository.setSineNotifications(_device!.id, false);
+        await _enableNotifications(_device!.id, false);
       } catch (_) {}
     }
 
-    await _subscription?.cancel();
-    _subscription = null;
+    for (var sub in _subscriptions) {
+      await sub.cancel();
+    }
+    _subscriptions.clear();
+  }
+
+  Future<void> _enableNotifications(String deviceId, bool enable) async {
+    await _repository.setNotifications(
+      deviceId,
+      BleUUIDs.SAMPLE_UUID,
+      BleUUIDs.T_UUID,
+      enable,
+    );
+    await _repository.setNotifications(
+      deviceId,
+      BleUUIDs.SAMPLE_UUID,
+      BleUUIDs.YK_UUID,
+      enable,
+    );
+    await _repository.setNotifications(
+      deviceId,
+      BleUUIDs.SAMPLE_UUID,
+      BleUUIDs.YC_UUID,
+      enable,
+    );
+    await _repository.setNotifications(
+      deviceId,
+      BleUUIDs.SAMPLE_UUID,
+      BleUUIDs.YF_UUID,
+      enable,
+    );
+    await _repository.setNotifications(
+      deviceId,
+      BleUUIDs.SAMPLE_UUID,
+      BleUUIDs.YA_UUID,
+      enable,
+    );
   }
 
   void flush() {
-    _allPoints.clear();
-    state = [];
-    _xCounter = 0;
-  }
-
-  void _addPoint(double yValue) {
-    _xCounter += 1;
-    _allPoints.add(FlSpot(_xCounter.toDouble(), yValue));
+    _ykPoints.clear();
+    _ycPoints.clear();
+    _yfPoints.clear();
+    _yaPoints.clear();
+    _currentT = null;
+    state = _getEmptyState();
   }
 
   void setWindowSize(int size) {
     if (size <= 0) return;
     _windowSize = size;
-    if (size > _xCounter) _windowSize = _xCounter;
-    
     state = _getVisibleWindow();
   }
-
-  List<FlSpot> get history => List.unmodifiable(_allPoints);
-  int get windowSize => _windowSize;
 }

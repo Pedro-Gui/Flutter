@@ -16,7 +16,7 @@ class BleConnectedPage extends ConsumerStatefulWidget {
 }
 
 class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
-  double _sliderValue = 0.0;
+  double _hState = 1.0;
   bool _ledState = false;
   int _windowValue = 0;
   final GlobalKey _chartKey = GlobalKey();
@@ -32,15 +32,14 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
   Future<void> _loadHardwareState() async {
     try {
       final controller = ref.read(bleControllerProvider.notifier);
-      final initialStep = await controller.getStep();
       final initialLed = await controller.getLedState();
+      final _hState = await controller.getH();
 
       final notifier = ref.read(sineGraphDataProvider.notifier);
       final initialWindowValue = notifier.windowSize;
 
       if (mounted) {
         setState(() {
-          _sliderValue = initialStep.clamp(0.0, 1.0);
           _ledState = initialLed;
           _windowValue = initialWindowValue;
         });
@@ -95,7 +94,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
             icon: const Icon(Icons.share),
             tooltip: 'Exportar Dados',
             onSelected: (String format) async {
-              final points = ref.read(sineGraphDataProvider.notifier).history;
+              final points = ref.read(sineGraphDataProvider);
 
               if (points.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -104,8 +103,9 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                 return;
               }
               try {
-                if (format == 'Matlab')
+                if (format == 'Matlab') {
                   await ExportService.exportToMatlab(points);
+                }
                 if (format == 'txt') await ExportService.exportToTxt(points);
                 if (format == 'xml') await ExportService.exportToXml(points);
                 if (format == 'pdf') {
@@ -242,9 +242,13 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: SizeSpinner(
                       value: _windowValue,
-                      maxValue: points.isNotEmpty ? points.last.x.toInt() : 100,
+                      maxValue: points.isEmpty
+                          ? points['yk']!.last.x.toInt()
+                          : 100,
                       onSubmitted: (x) {
-                        ref.read(sineGraphDataProvider.notifier).setWindowSize(x);
+                        ref
+                            .read(sineGraphDataProvider.notifier)
+                            .setWindowSize(x);
                         setState(() {
                           _windowValue = x;
                         });
@@ -327,7 +331,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                             ),
                             lineBarsData: [
                               LineChartBarData(
-                                spots: points,
+                                spots: points['yk'] ?? [],
                                 isCurved: false,
                                 color: Colors.blue,
                                 barWidth: 2,
@@ -343,7 +347,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
               ),
             ),
 
-            // --- Interation menu: STEP, LED STATE ---
+            // --- Interation menu ---
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -375,23 +379,17 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
 
                   const SizedBox(width: 16),
 
-                  Expanded(
-                    child: Slider(
-                      min: 0,
-                      max: 1,
-                      value: _sliderValue.clamp(0.0, 1.0),
-                      showValueIndicator: ShowValueIndicator.alwaysVisible,
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      inactiveColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.2),
-                      onChanged: (value) {
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: SizeSpinner(
+                      value: _hState.toInt(),
+                      maxValue: 10,
+                      step: 1,
+                      onSubmitted: (x) {
+                        ref.read(bleControllerProvider.notifier).setH(x.toDouble());
                         setState(() {
-                          _sliderValue = value;
+                          _hState = x.toDouble();
                         });
-                      },
-                      onChangeEnd: (value) {
-                        ref.read(bleControllerProvider.notifier).setStep(value);
                       },
                     ),
                   ),

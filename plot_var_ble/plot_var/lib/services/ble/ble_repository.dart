@@ -3,13 +3,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:plot_ble/models/ble_sys_device.dart';
 import 'package:universal_ble/universal_ble.dart';
-import 'ble_uuids.dart';
 
 class BleRepository {
   final _scanResultsController =
       StreamController<List<SysBleDevice>>.broadcast();
-  final _isScanningController = 
-      StreamController<bool>.broadcast();
+  final _isScanningController = StreamController<bool>.broadcast();
   final _connectionStateControllers =
       <String, StreamController<BleConnectionState>>{};
   final _characteristicUpdatesController =
@@ -43,7 +41,6 @@ class BleRepository {
               ? BleConnectionState.connected
               : BleConnectionState.disconnected;
           _getConnectionStream(deviceId).add(state);
-          
         };
 
     UniversalBle.onValueChange =
@@ -83,7 +80,7 @@ class BleRepository {
 
     await UniversalBle.startScan();
 
-    Future.delayed(const Duration(seconds: 15), () {
+    Future.delayed(const Duration(seconds: 20), () {
       if (_isScanning) stopScan();
     });
   }
@@ -105,89 +102,128 @@ class BleRepository {
     await UniversalBle.disconnect(deviceId);
   }
 
-  // --- Leitura de Valores ---
+  // --- Leitura e Escrita de Valores ---
 
-  Future<double> readStep(String deviceId) async {
+  Future<T> readCharacteristic<T>(
+    String deviceId,
+    String serviceId,
+    String characteristicId,
+  ) async {
     final bytes = await UniversalBle.read(
       deviceId,
-      BleUUIDs.sinService,
-      BleUUIDs.stepCharacteristic,
+      serviceId,
+      characteristicId,
     );
 
-    if (bytes.length < 4) {
-      throw Exception(
-        'Payload de leitura inválido para Step. Esperado 8 bytes, recebido ${bytes.length}',
-      );
+    final byteData = ByteData.sublistView(Uint8List.fromList(bytes));
+
+    switch (T) {
+      case == double:
+        if (byteData.lengthInBytes < 8) {
+          throw Exception(
+            'Leitura inválida para Step. Esperado 8 bytes, recebido ${bytes.length}',
+          );
+        }
+        return byteData.getFloat64(0, Endian.little) as T;
+
+      case == int:
+        if (byteData.lengthInBytes < 4) {
+          throw Exception(
+            'Leitura inválida para Step. Esperado 4 bytes, recebido ${bytes.length}',
+          );
+        }
+        return byteData.getInt32(0, Endian.little) as T;
+      case == bool:
+        final value = utf8.decode(bytes);
+        return value.contains('1') as T;
+
+      default:
+        throw Exception('$T não suportado');
     }
-
-    final data = ByteData.sublistView(Uint8List.fromList(bytes));
-    return data.getFloat32(0, Endian.little);
   }
 
-  Future<bool> readLedState(String deviceId) async {
-    final bytes = await UniversalBle.read(
-      deviceId,
-      BleUUIDs.ledService,
-      BleUUIDs.ledCharacteristic,
-    );
-
-    final value = utf8.decode(bytes);
-    return value.contains('1');
-  }
-
-  Stream<double> subscribeToSine(String deviceId) {
+  Stream<T> subscribeToCarac<T>(
+    String deviceId,
+    String serviceId,
+    String characteristicId,
+  ) {
     return _characteristicUpdatesController.stream
         .where(
           (update) =>
               update.deviceId == deviceId &&
               update.characteristicId.toLowerCase() ==
-                  BleUUIDs.sinCharacteristic.toLowerCase(),
+                  characteristicId.toLowerCase(),
         )
         .map((update) {
           final bytes = update.value;
-          if (bytes.length < 4) return 0.0;
-          final data = Uint8List.fromList(bytes).buffer.asByteData();
-          return data.getFloat32(0, Endian.little);
+          final byteData = ByteData.sublistView(Uint8List.fromList(bytes));
+
+          switch (T) {
+            case == double:
+              if (byteData.lengthInBytes < 8) return 0.0 as T;
+              return byteData.getFloat64(0, Endian.little) as T;
+
+            case == int:
+              if (byteData.lengthInBytes < 4) return 0 as T;
+              return byteData.getUint32(0, Endian.little) as T;
+
+            default:
+              throw Exception('$T não suportado');
+          }
         });
   }
+  
+  Future<void> writeOnCaracteristic<T>( 
+    String deviceId,
+    String serviceId,
+    String characteristicId,
+    T value,
+  )async{
+    Uint8List payload;
 
-  // --- Escrita de Atuadores ---
+  switch (T) {
+    case == double:
+      final byteData = ByteData(8);
+      byteData.setFloat64(0, value as double, Endian.little);
+      payload = byteData.buffer.asUint8List();
+      break;
 
-  Future<void> writeStep(String deviceId, double value) async {
-    final byteData = ByteData(8);
-    byteData.setFloat64(0, value, Endian.little);
+    case == int:
+      final byteData = ByteData(4);
+      byteData.setUint32(0, value as int, Endian.little);
+      payload = byteData.buffer.asUint8List();
+      break;
 
-    await UniversalBle.write(
-      deviceId,
-      BleUUIDs.sinService,
-      BleUUIDs.stepCharacteristic,
-      byteData.buffer.asUint8List(),
-    );
+    case == bool:
+      final isTrue = value as bool;
+      payload = Uint8List.fromList([isTrue ? 1 : 0]);
+      break;
+
+    default:
+      throw Exception('$T não suportado');
   }
 
-  Future<void> writeLedState(String deviceId, bool turnOn) async {
-    final payload = Uint8List.fromList([turnOn ? 49 : 48]); // '1' ou '0' ASCII
-
-    await UniversalBle.write(
-      deviceId,
-      BleUUIDs.ledService,
-      BleUUIDs.ledCharacteristic,
-      payload,
-    );
+  await UniversalBle.write(
+    deviceId,
+    serviceId,
+    characteristicId,
+    payload,
+  );
   }
-
-  Future<void> setSineNotifications(String deviceId, bool enable) async {
+  
+  Future<void> setNotifications(String deviceId, String serviceId,
+      String characteristicId, bool enable) async {
     if (enable) {
       await UniversalBle.subscribeNotifications(
         deviceId,
-        BleUUIDs.sinService,
-        BleUUIDs.sinCharacteristic,
+        serviceId,
+        characteristicId,        
       );
     } else {
       await UniversalBle.unsubscribe(
         deviceId,
-        BleUUIDs.sinService,
-        BleUUIDs.sinCharacteristic,
+        serviceId,
+        characteristicId,
       );
     }
   }

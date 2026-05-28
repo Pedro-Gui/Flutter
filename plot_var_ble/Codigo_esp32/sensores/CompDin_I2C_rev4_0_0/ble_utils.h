@@ -12,5 +12,5 @@
 void initBluetooth(double* p_h, unsigned int* p_m, double* b, double* a, int* updateOk);
 void sendData(unsigned long t_atual, double yk, double yc, double yf, double ya);
 void gerenciarReconexaoBluetooth();
-
+void sync_updateOK(int updateOK);
 #endif

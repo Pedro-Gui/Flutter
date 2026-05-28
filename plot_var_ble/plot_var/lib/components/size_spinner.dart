@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 class SizeSpinner extends StatelessWidget {
   final int value;
   final int maxValue;
+  final int step;
   final ValueChanged<int> onSubmitted;
 
   const SizeSpinner({
     super.key,
     required this.value,
     required this.maxValue,
+    this.step = 100,
     required this.onSubmitted,
   });
 
@@ -31,12 +33,12 @@ class SizeSpinner extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
             color: theme.colorScheme.primary,
-            onPressed: () => onSubmitted(100),
+            onPressed: () => onSubmitted(step),
           ),
           IconButton(
             icon: const Icon(Icons.remove),
             color: theme.colorScheme.primary,
-            onPressed: () => onSubmitted(value - 100),
+            onPressed: () => onSubmitted(value - step),
           ),
           SizedBox(
             width: 60,
@@ -46,15 +48,15 @@ class SizeSpinner extends StatelessWidget {
               keyboardType: TextInputType.number,
               style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: const InputDecoration(border: InputBorder.none),
-              onEditingComplete: () => onSubmitted(int.tryParse(controller.text) ?? 100),
-              onChanged: (val) => onSubmitted(int.tryParse(val) ?? 100),
-              onSubmitted: (val) => onSubmitted(int.tryParse(val) ?? 100),
+              onEditingComplete: () => onSubmitted(int.tryParse(controller.text) ?? step),
+              onChanged: (val) => onSubmitted(int.tryParse(val) ?? step),
+              onSubmitted: (val) => onSubmitted(int.tryParse(val) ?? step),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.add),
             color: theme.colorScheme.primary,
-            onPressed: () => onSubmitted((value + 100)),
+            onPressed: () => onSubmitted((value + step)),
           ),
           IconButton(
             icon: const Icon(Icons.keyboard_double_arrow_up_rounded),

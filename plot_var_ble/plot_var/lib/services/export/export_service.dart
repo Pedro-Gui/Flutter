@@ -24,30 +24,61 @@ class ExportService {
     );
   }
 
-  static Future<void> exportToTxt(List<FlSpot> points) async {
+  static Future<void> exportToTxt(Map<String, List<FlSpot>> dataMap) async {
+    final yk = dataMap['yk'] ?? [];
+    final yc = dataMap['yc'] ?? [];
+    final yf = dataMap['yf'] ?? [];
+    final ya = dataMap['ya'] ?? [];
+
     final sb = StringBuffer();
-    sb.writeln('Tempo(x); Valor(y)');
-    for (var p in points) {
-      sb.writeln('${p.x.toStringAsFixed(2)}; ${p.y.toStringAsFixed(4)}');
+    sb.writeln('Tempo(T); yk; yc; yf; ya');
+
+    for (int i = 0; i < yk.length; i++) {
+      final t = yk[i].x.toStringAsFixed(3);
+      final valYk = yk[i].y.toStringAsFixed(4);
+      final valYc = i < yc.length ? yc[i].y.toStringAsFixed(4) : '0.0000';
+      final valYf = i < yf.length ? yf[i].y.toStringAsFixed(4) : '0.0000';
+      final valYa = i < ya.length ? ya[i].y.toStringAsFixed(4) : '0.0000';
+
+      sb.writeln('$t; $valYk; $valYc; $valYf; $valYa');
     }
+
     await _shareFile(
-      'senoide_dados.txt',
-      sb.toString().codeUnits,
+      'telemetria_dados.txt',
+      utf8.encode(sb.toString()),
       'text/plain',
     );
   }
 
-  static Future<void> exportToXml(List<FlSpot> points) async {
+  static Future<void> exportToXml(Map<String, List<FlSpot>> dataMap) async {
+    final yk = dataMap['yk'] ?? [];
+    final yc = dataMap['yc'] ?? [];
+    final yf = dataMap['yf'] ?? [];
+    final ya = dataMap['ya'] ?? [];
+
     final sb = StringBuffer();
     sb.writeln('<?xml version="1.0" encoding="UTF-8"?>');
-    sb.writeln('<SensorData>');
-    for (var p in points) {
+    sb.writeln('<TelemetryData>');
+
+    for (int i = 0; i < yk.length; i++) {
+      final t = yk[i].x.toStringAsFixed(3);
+      final valYk = yk[i].y.toStringAsFixed(4);
+      final valYc = i < yc.length ? yc[i].y.toStringAsFixed(4) : '0.0000';
+      final valYf = i < yf.length ? yf[i].y.toStringAsFixed(4) : '0.0000';
+      final valYa = i < ya.length ? ya[i].y.toStringAsFixed(4) : '0.0000';
+
       sb.writeln(
-        '  <Point x="${p.x.toStringAsFixed(2)}" y="${p.y.toStringAsFixed(4)}" />',
+        '  <Sample t="$t" yk="$valYk" yc="$valYc" yf="$valYf" ya="$valYa" />',
       );
     }
-    sb.writeln('</SensorData>');
-    await _shareFile('senoide_dados.xml', sb.toString().codeUnits, 'text/xml');
+
+    sb.writeln('</TelemetryData>');
+    
+    await _shareFile(
+      'telemetria_dados.xml', 
+      utf8.encode(sb.toString()), 
+      'text/xml',
+    );
   }
 
   static Future<void> exportToPdf(Uint8List? imageBytes) async {
@@ -90,21 +121,33 @@ class ExportService {
     );
   }
 
-  static Future<void> exportToMatlab(List<FlSpot> points) async {
-    final dateStr = DateTime.now().toString();
+  static Future<void> exportToMatlab(Map<String, List<FlSpot>> dataMap) async {
+    final yk = dataMap['yk'] ?? [];
+    final yc = dataMap['yc'] ?? [];
+    final yf = dataMap['yf'] ?? [];
+    final ya = dataMap['ya'] ?? [];
+    final dateStr = DateTime.now().toIso8601String();
 
-    final StringBuffer buffer = StringBuffer();
-    buffer.writeln('%Nova Amostragem');
-    buffer.writeln('%$dateStr');
-    buffer.writeln('Z=[');
-    for (var p in points) {
-      buffer.writeln('${p.x.toStringAsFixed(6)} ${p.y.toStringAsFixed(6)}');
+    final sb = StringBuffer();
+    sb.writeln('% CompDin Telemetry Sample');
+    sb.writeln('% Timestamp: $dateStr');
+    sb.writeln('% Columns: [ Time(T) | yk | yc | yf | ya ]');
+    sb.writeln('Z = [');
+
+    for (int i = 0; i < yk.length; i++) {
+      final t = yk[i].x.toStringAsFixed(6);
+      final valYk = yk[i].y.toStringAsFixed(6);
+      final valYc = i < yc.length ? yc[i].y.toStringAsFixed(6) : '0.000000';
+      final valYf = i < yf.length ? yf[i].y.toStringAsFixed(6) : '0.000000';
+      final valYa = i < ya.length ? ya[i].y.toStringAsFixed(6) : '0.000000';
+
+      sb.writeln('  $t $valYk $valYc $valYf $valYa;');
     }
+    sb.writeln('];');
 
-    buffer.writeln('];');
     await _shareFile(
-      'senoide_dados.m',
-      utf8.encode(buffer.toString()),
+      'telemetria_dados.m',
+      utf8.encode(sb.toString()),
       'text/plain',
     );
   }

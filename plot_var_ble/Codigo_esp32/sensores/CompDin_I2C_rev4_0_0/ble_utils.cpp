@@ -1,5 +1,6 @@
 #include "ble_utils.h"
 
+int* ptr_updateOk = NULL;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
@@ -82,19 +83,19 @@ public:
     size_t rxLength = characteristic->getLength();
 
     // Validação: Verifica se o tamanho do dado recebido é exatamente um double (8 bytes)
-    if (rxLength == sizeof(double)) {
-      double ledCommand;
-      memcpy(&ledCommand, rxData, sizeof(double));
+    if (rxLength == sizeof(int)) {
+      int ledCommand;
+      memcpy(&ledCommand, rxData, sizeof(int));
 
       Serial.println("*********");
       Serial.print("Novo Comando LED Recebido: ");
       Serial.println(ledCommand, 1);  // Exibe com 1 casa decimal (ex: 1.0 ou 0.0)
 
       // Executa a ação baseada no valor numérico do double
-      if (ledCommand == 1.0) {
+      if (ledCommand == 1) {
         Serial.println("Acao: Ligando LED");
         digitalWrite(LED_BUILTIN, LOW);
-      } else if (ledCommand == 0.0) {
+      } else if (ledCommand == 0) {
         Serial.println("Acao: Desligando LED");
         digitalWrite(LED_BUILTIN, HIGH);
       }
@@ -207,7 +208,7 @@ void initBluetooth(double* p_h, unsigned int* p_m, double* p_b, double* p_a, int
     "Semáforo para controle de atualização",
     new controlCallbacks<int>(p_updateOk));
   RX_OK->setValue((uint8_t*)p_updateOk, 4);
-
+  ptr_updateOk = p_updateOk;
   controlService->start();
 
   // === SERVIÇO 3: LED ===
@@ -267,4 +268,9 @@ void gerenciarReconexaoBluetooth() {
   if (deviceConnected && !oldDeviceConnected) {
     oldDeviceConnected = deviceConnected;
   }
+}
+
+void sync_updateOK(int updateOK){
+  *ptr_updateOk = updateOK;
+  RX_OK->setValue((uint8_t*)ptr_updateOk, 4);
 }
