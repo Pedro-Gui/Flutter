@@ -82,7 +82,7 @@ double beta = 0.0;
 double alfa = 0.0;
 double alfa_f = 0.0;
 
-int updateOk = 0;  // Semáforo para controle de atualização via mensagens
+bool updateOk = false;  // Semáforo para controle de atualização via mensagens
 
 unsigned int m = 1;      // Fator de decimação
 unsigned int p_m;        // Fator de decimação auxiliar
@@ -199,9 +199,9 @@ void loop() {
   //=== TOC: Tempo OCioso ==============================================
   gerenciarReconexaoBluetooth();  // Verifica se a conexão BLE esta ativa
 
-  if (updateOk == 1) {
+  if (updateOk) {
     atualizaCompensador(p_h, p_m, b, a);
-    sync_updateOK(0);
+    sync_updateOK(false);
   }
   //=== Fim do TOC: Tempo OCioso =======================================
 

@@ -9,8 +9,8 @@
 #include <BLE2902.h>
 
 // --- Funções Públicas ---
-void initBluetooth(double* p_h, unsigned int* p_m, double* b, double* a, int* updateOk);
+void initBluetooth(double* p_h, unsigned int* p_m, double* b, double* a, bool* updateOk);
 void sendData(unsigned long t_atual, double yk, double yc, double yf, double ya);
 void gerenciarReconexaoBluetooth();
-void sync_updateOK(int updateOK);
+void sync_updateOK(bool updateOK);
 #endif

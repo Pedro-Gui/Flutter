@@ -82,7 +82,7 @@ final class BleControllerProvider
   }
 }
 
-String _$bleControllerHash() => r'a042c292b56d809f8a69d553a332c99badab9aef';
+String _$bleControllerHash() => r'540675f5115c9fffcb966747f198dc6b001347c9';
 
 abstract class _$BleController extends $Notifier<SysBleDevice?> {
   SysBleDevice? build();
@@ -227,7 +227,7 @@ final class SineGraphDataProvider
   }
 }
 
-String _$sineGraphDataHash() => r'1e897616c6467bb3d6b84690aa4bc0fbe4eeb556';
+String _$sineGraphDataHash() => r'5d29e323c43757384eecf4f965b2dc3b79434172';
 
 /// Controladora de streaming de dados em tempo real para o grafico.
 

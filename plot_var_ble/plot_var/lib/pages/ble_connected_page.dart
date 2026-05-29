@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:plot_ble/components/size_spinner.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:plot_ble/components/sys_spinner.dart';
+import 'package:plot_ble/components/sys_chart.dart';
 import 'package:plot_ble/services/ble/ble_controller.dart';
 import 'package:plot_ble/services/export/export_service.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +19,7 @@ class BleConnectedPage extends ConsumerStatefulWidget {
 
 class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
   double _hState = 1.0;
-  bool _ledState = false;
+  bool _ledState = true;
   int _windowValue = 0;
   final GlobalKey _chartKey = GlobalKey();
 
@@ -32,14 +34,15 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
   Future<void> _loadHardwareState() async {
     try {
       final controller = ref.read(bleControllerProvider.notifier);
-      final initialLed = await controller.getLedState();
-      final _hState = await controller.getH();
-
-      final notifier = ref.read(sineGraphDataProvider.notifier);
-      final initialWindowValue = notifier.windowSize;
+      final initialLed = await controller.getLed();
+      final initialH = await controller.getH();
+      final initialWindowValue = ref
+          .read(sineGraphDataProvider.notifier)
+          .windowSize;
 
       if (mounted) {
         setState(() {
+          _hState = initialH;
           _ledState = initialLed;
           _windowValue = initialWindowValue;
         });
@@ -72,31 +75,84 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
     }
   }
 
+  Widget getConectionButton() {
+    final connectedDevice = ref.watch(bleControllerProvider);
+    final bleController = ref.watch(bleControllerProvider.notifier);
+
+    if (bleController.isConnecting) {
+      return const Padding(
+        padding: EdgeInsets.all(12.0),
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      );
+    }
+
+    if (connectedDevice != null) {
+      return IconButton(
+        tooltip: 'Desconectar Dispositivo',
+        icon: const Icon(Icons.bluetooth_disabled),
+        onPressed: () async {
+          await bleController.disconnect();
+          if (mounted) {
+            context.go('/scanner');
+          }
+        },
+      );
+    }
+
+    if (bleController.hasLastDevice) {
+      return IconButton(
+        tooltip: 'Reconectar ao Microcontrolador',
+        icon: const Icon(Icons.bluetooth_connected),
+        onPressed: () async {
+          try {
+            await bleController.reconnect();
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Falha ao reconectar: $e')),
+              );
+            }
+          }
+        },
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final points = ref.watch(sineGraphDataProvider);
+    final graphPoints = ref.watch(sineGraphDataProvider);
+    final graphDataNotifier = ref.watch(sineGraphDataProvider.notifier);
+    final bleController = ref.read(bleControllerProvider);
+    final bleControllerNotifier = ref.read(bleControllerProvider.notifier);
+    final bool isActive = graphDataNotifier.isListening;
 
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Senoide BLE - ${ref.read(bleControllerProvider)?.name ?? 'Desconectado'}',
+          bleController?.name ?? 'Desconectado',
+          style: GoogleFonts.montserrat(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.5,
+            color: Theme.of(context).colorScheme.inversePrimary,
+          ),
         ),
+
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: () {
-              ref.read(bleControllerProvider.notifier).disconnect();
-            },
-            icon: const Icon(Icons.bluetooth_disabled),
-          ),
+          getConectionButton(),
 
           PopupMenuButton<String>(
             icon: const Icon(Icons.share),
             tooltip: 'Exportar Dados',
             onSelected: (String format) async {
-              final points = ref.read(sineGraphDataProvider);
-
-              if (points.isEmpty) {
+              if (graphPoints.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Nenhum dado para exportar!')),
                 );
@@ -104,10 +160,14 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
               }
               try {
                 if (format == 'Matlab') {
-                  await ExportService.exportToMatlab(points);
+                  await ExportService.exportToMatlab(graphPoints);
                 }
-                if (format == 'txt') await ExportService.exportToTxt(points);
-                if (format == 'xml') await ExportService.exportToXml(points);
+                if (format == 'txt') {
+                  await ExportService.exportToTxt(graphPoints);
+                }
+                if (format == 'xml') {
+                  await ExportService.exportToXml(graphPoints);
+                }
                 if (format == 'pdf') {
                   final imageBytes = await _captureChart();
                   await ExportService.exportToPdf(imageBytes);
@@ -176,27 +236,30 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  Divider(thickness: 0.5, color: Colors.grey[400]),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
+                          backgroundColor: isActive
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
+                          foregroundColor: isActive
+                              ? Theme.of(context).colorScheme.onError
+                              : Theme.of(context).colorScheme.onPrimary,
                         ),
-                        onPressed: () =>
-                            ref.read(sineGraphDataProvider.notifier).start(),
-                        icon: Icon(
-                          Icons.play_arrow,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                        label: Text(
-                          'Start',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        ),
+                        onPressed: () {
+                          if (isActive) {
+                            graphDataNotifier.stop();
+                          } else {
+                            graphDataNotifier.start();
+                          }
+                        },
+                        icon: Icon(isActive ? Icons.stop : Icons.play_arrow),
+                        label: Text(isActive ? 'Stop' : 'Start'),
                       ),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
@@ -204,27 +267,7 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                             context,
                           ).colorScheme.primary,
                         ),
-                        onPressed: () =>
-                            ref.read(sineGraphDataProvider.notifier).stop(),
-                        icon: Icon(
-                          Icons.stop,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                        label: Text(
-                          'Stop',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                        ),
-                        onPressed: () =>
-                            ref.read(sineGraphDataProvider.notifier).flush(),
+                        onPressed: () => graphDataNotifier.flush(),
                         icon: Icon(
                           Icons.delete_sweep,
                           color: Theme.of(context).colorScheme.onPrimary,
@@ -236,25 +279,26 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
                           ),
                         ),
                       ),
+                      SysSpinner<int>(
+                        value: _windowValue,
+                        title: 'N° Pontos:',
+                        maxValue:
+                            (graphPoints['yk'] != null &&
+                                graphPoints['yk']!.isNotEmpty)
+                            ? graphPoints['yk']!.last.x.toInt()
+                            : 100,
+                        step: 100,
+                        onSubmitted: (x) {
+                          graphDataNotifier.setWindowSize(x);
+                          setState(() {
+                            _windowValue = x;
+                          });
+                        },
+                      ),
                     ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: SizeSpinner(
-                      value: _windowValue,
-                      maxValue: points.isEmpty
-                          ? points['yk']!.last.x.toInt()
-                          : 100,
-                      onSubmitted: (x) {
-                        ref
-                            .read(sineGraphDataProvider.notifier)
-                            .setWindowSize(x);
-                        setState(() {
-                          _windowValue = x;
-                        });
-                      },
-                    ),
-                  ),
+
+                  
                 ],
               ),
             ),
@@ -262,136 +306,91 @@ class _BleConnectedPageState extends ConsumerState<BleConnectedPage> {
             // --- Área do Gráfico ---
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: points.isEmpty
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: graphPoints.isEmpty
                     ? const Center(child: Text('Nenhum dado recebido ainda...'))
                     : RepaintBoundary(
                         key: _chartKey,
-                        child: LineChart(
-                          LineChartData(
-                            gridData: const FlGridData(show: true),
-                            borderData: FlBorderData(show: true),
-
-                            titlesData: FlTitlesData(
-                              show: true,
-                              topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              // EIXO X
-                              bottomTitles: AxisTitles(
-                                axisNameWidget: const Text(
-                                  'Amostras',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                axisNameSize: 22,
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 30,
-                                  getTitlesWidget: (value, meta) {
-                                    return SideTitleWidget(
-                                      meta: meta,
-                                      child: Text(
-                                        value.toInt().toString(),
-                                        style: const TextStyle(fontSize: 10),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              // EIXO Y
-                              leftTitles: AxisTitles(
-                                axisNameWidget: const Text(
-                                  'Amplitude',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                axisNameSize: 24,
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 40,
-                                  getTitlesWidget: (value, meta) {
-                                    return SideTitleWidget(
-                                      meta: meta,
-                                      child: Text(
-                                        value.toStringAsFixed(1),
-                                        style: const TextStyle(fontSize: 10),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: points['yk'] ?? [],
-                                isCurved: false,
-                                color: Colors.blue,
-                                barWidth: 2,
-                                isStrokeCapRound: false,
-                                dotData: const FlDotData(show: false),
-                                belowBarData: BarAreaData(show: false),
-                              ),
-                            ],
-                          ),
-                          duration: Duration.zero,
-                        ),
+                        child: SysChart(graphPoints: graphPoints)
                       ),
               ),
             ),
 
             // --- Interation menu ---
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
+              padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+              child: Column(
                 children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                    ),
-                    onPressed: () async {
-                      await ref
-                          .read(bleControllerProvider.notifier)
-                          .setLed(!_ledState);
-
-                      setState(() {
-                        _ledState = !_ledState;
-                      });
-                    },
-                    icon: Icon(
-                      _ledState ? Icons.light_mode : Icons.light_mode_outlined,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                    label: Text(
-                      'Toggle LED',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                  Divider(thickness: 0.5, color: Colors.grey[400]),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                        ),
+                        onPressed: () async {
+                          await bleControllerNotifier.setLed(!_ledState);
+                          setState(() {
+                            _ledState = !_ledState;
+                          });
+                        },
+                        icon: Icon(
+                          _ledState
+                              ? Icons.light_mode
+                              : Icons.light_mode_outlined,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                        label: Text(
+                          'Toggle LED',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(width: 16),
+                      const SizedBox(width: 16),
 
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: SizeSpinner(
-                      value: _hState.toInt(),
-                      maxValue: 10,
-                      step: 1,
-                      onSubmitted: (x) {
-                        ref.read(bleControllerProvider.notifier).setH(x.toDouble());
-                        setState(() {
-                          _hState = x.toDouble();
-                        });
-                      },
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: SysSpinner<double>(
+                          value: _hState,
+                          title: 'Intervalo de amostragem H:',
+                          maxValue: 10,
+                          step: 0.1,
+                          onSubmitted: (x) {
+                            bleControllerNotifier.setH(x);
+                            setState(() {
+                              _hState = x;
+                            });
+                          },
+                        ),
+                      ),
+
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                        ),
+                        onPressed: () async {
+                          await bleControllerNotifier.setOK(true);
+                        },
+                        icon: Icon(
+                          Icons.send,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                        label: Text(
+                          'SEND',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

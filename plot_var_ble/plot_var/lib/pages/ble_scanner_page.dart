@@ -1,5 +1,6 @@
 import 'package:plot_ble/components/scan_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plot_ble/services/ble/ble_controller.dart';
 import 'package:plot_ble/services/ble/ble_permission.dart';
@@ -45,7 +46,15 @@ class _BleScannerPageState extends ConsumerState<BleScannerPage> {
     final isScanning = isScanningAsync.value ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Scanner BLE'), centerTitle: true),
+      appBar: AppBar(title: Text(
+          'Scanner BLE',
+          style: GoogleFonts.montserrat(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2,
+            color: Theme.of(context).colorScheme.inversePrimary,
+          ),
+        ), centerTitle: true),
       body: SafeArea(
         child: scanResultsAsync.when(
           data: (results) {

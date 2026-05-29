@@ -18,7 +18,7 @@ class ExportService {
     await file.writeAsBytes(bytes);
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Aqui estão os dados da Senoide BLE!',
+        text: 'Aqui estão os dados!',
         files: [XFile(file.path, mimeType: mimeType)],
       ),
     );
@@ -93,11 +93,6 @@ class ExportService {
       pw.MultiPage(
         build: (pw.Context context) {
           return [
-            pw.Text(
-              'Senoide (BLE)',
-              style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 20),
             
             if (chartImage != null) ...[
               pw.Image(chartImage),
@@ -108,14 +103,14 @@ class ExportService {
       ),
     );
     final bytes = await pdf.save();
-    await _shareFile('senoide_dados.pdf', bytes, 'application/pdf');
+    await _shareFile('dados.pdf', bytes, 'application/pdf');
   }
 
   static Future<void> exportToPng(Uint8List? imageBytes) async {
     if (imageBytes == null) throw Exception('Falha ao capturar imagem do gráfico');
 
     await _shareFile(
-      'senoide_grafico.png', 
+      'grafico.png', 
       imageBytes, 
       'image/png'
     );

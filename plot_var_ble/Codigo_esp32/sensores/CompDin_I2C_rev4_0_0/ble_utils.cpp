@@ -1,6 +1,6 @@
 #include "ble_utils.h"
 
-int* ptr_updateOk = NULL;
+bool* ptr_updateOk = NULL;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
@@ -71,6 +71,9 @@ class controlCallbacks : public BLECharacteristicCallbacks {
           Serial.println(*targetPtr);
           Serial.println("*********");
         } else {
+          Serial.println("*********");
+          Serial.println("Novo valor não reconhecido ");
+          Serial.println("*********");
           characteristic->setValue((uint8_t*)targetPtr, sizeof(T));
         }
       }
@@ -83,26 +86,26 @@ public:
     size_t rxLength = characteristic->getLength();
 
     // Validação: Verifica se o tamanho do dado recebido é exatamente um double (8 bytes)
-    if (rxLength == sizeof(int)) {
-      int ledCommand;
-      memcpy(&ledCommand, rxData, sizeof(int));
+    if (rxLength == sizeof(bool)) {
+      bool ledCommand;
+      memcpy(&ledCommand, rxData, sizeof(bool));
 
       Serial.println("*********");
       Serial.print("Novo Comando LED Recebido: ");
-      Serial.println(ledCommand, 1);  // Exibe com 1 casa decimal (ex: 1.0 ou 0.0)
+      Serial.println(ledCommand);  // Exibe com 1 casa decimal (ex: 1.0 ou 0.0)
 
       // Executa a ação baseada no valor numérico do double
-      if (ledCommand == 1) {
+      if (ledCommand) {
         Serial.println("Acao: Ligando LED");
         digitalWrite(LED_BUILTIN, LOW);
-      } else if (ledCommand == 0) {
+      } else {
         Serial.println("Acao: Desligando LED");
         digitalWrite(LED_BUILTIN, HIGH);
       }
       Serial.println("*********");
     } else {
-      double currentStatus = (digitalRead(LED_BUILTIN) == HIGH) ? 1.0 : 0.0;
-      characteristic->setValue((uint8_t*)&currentStatus, sizeof(double));
+      bool currentStatus = (digitalRead(LED_BUILTIN) == LOW) ? true : false;
+      characteristic->setValue((uint8_t*)&currentStatus, sizeof(bool));
     }
   }
 };
@@ -133,7 +136,7 @@ BLECharacteristic* createMyCharacteristic(
 }
 
 // --- Funções Públicas ---
-void initBluetooth(double* p_h, unsigned int* p_m, double* p_b, double* p_a, int* p_updateOk) {
+void initBluetooth(double* p_h, unsigned int* p_m, double* p_b, double* p_a, bool* p_updateOk) {
   BLEDevice::init("CTR_Termometer");
   server = BLEDevice::createServer();
   server->setCallbacks(new MyServerCallbacks());
@@ -206,8 +209,8 @@ void initBluetooth(double* p_h, unsigned int* p_m, double* p_b, double* p_a, int
     OK_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE,
     "Semáforo para controle de atualização",
-    new controlCallbacks<int>(p_updateOk));
-  RX_OK->setValue((uint8_t*)p_updateOk, 4);
+    new controlCallbacks<bool>(p_updateOk));
+  RX_OK->setValue((uint8_t*)p_updateOk, 1);
   ptr_updateOk = p_updateOk;
   controlService->start();
 
@@ -219,8 +222,8 @@ void initBluetooth(double* p_h, unsigned int* p_m, double* p_b, double* p_a, int
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE,
     "LED SWITCH",
     new ledCallbacks());
-  double currentStatus = (digitalRead(LED_BUILTIN) == HIGH) ? 1.0 : 0.0;
-  RX_LED->setValue((uint8_t*)&currentStatus, 8);
+  bool currentStatus = (digitalRead(LED_BUILTIN) == LOW) ? true : false; //Normalmente ligado
+  RX_LED->setValue((uint8_t*)&currentStatus, sizeof(bool));
   ledService->start();
 
   // === ADVERTISING ===
@@ -257,7 +260,7 @@ void sendData(unsigned long t_atual, double yk, double yc, double yf, double ya)
 void gerenciarReconexaoBluetooth() {
   if (!deviceConnected && oldDeviceConnected) {
     static unsigned long t_debounce_adv = 0;
-    if (millis() - t_debounce_adv > 5000) {
+    if (millis() - t_debounce_adv > 500) {
       server->startAdvertising();
       Serial.println("Reiniciando advertising...");
       oldDeviceConnected = deviceConnected;
@@ -270,7 +273,7 @@ void gerenciarReconexaoBluetooth() {
   }
 }
 
-void sync_updateOK(int updateOK){
+void sync_updateOK(bool updateOK){
   *ptr_updateOk = updateOK;
-  RX_OK->setValue((uint8_t*)ptr_updateOk, 4);
+  RX_OK->setValue((uint8_t*)ptr_updateOk, sizeof(bool));
 }

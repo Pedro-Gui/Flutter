@@ -41,9 +41,9 @@ GoRouter router(Ref ref) {
       final isConnected = ref.read(bleControllerProvider) != null;
       final isScannerRoute = state.uri.path == '/scanner';
 
-      if (!isConnected && !isScannerRoute) {
+      /* if (!isConnected && !isScannerRoute) {
         return '/scanner';
-      }
+      } */
       if (isConnected && isScannerRoute) {
         return '/connected';
       }

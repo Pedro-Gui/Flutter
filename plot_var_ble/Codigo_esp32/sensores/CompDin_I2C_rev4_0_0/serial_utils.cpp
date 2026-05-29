@@ -9,9 +9,9 @@ static double* ptr_h = nullptr;
 static unsigned int* ptr_m = nullptr;
 static double* ptr_b = nullptr;
 static double* ptr_a = nullptr;
-static int* ptr_updateOk = nullptr;
+static bool* ptr_updateOk = nullptr;
 
-void initSerial(double* p_h, unsigned int* p_m, double* b, double* a, int* updateOk) {
+void initSerial(double* p_h, unsigned int* p_m, double* b, double* a, bool* updateOk) {
   ptr_h = p_h;
   ptr_m = p_m;
   ptr_b = b;
@@ -70,7 +70,7 @@ void interpretMessage() {
       parNameIndex = stringEdt.indexOf("ok=");
       if (parNameIndex != -1 && !passToNext && ptr_updateOk != nullptr) { 
         stringAux = stringEdt.substring(parNameIndex+3);
-        *ptr_updateOk = stringAux.toInt();
+        *ptr_updateOk = (stringAux.toInt() != 0);
         passToNext = true;
       }
     } else { 

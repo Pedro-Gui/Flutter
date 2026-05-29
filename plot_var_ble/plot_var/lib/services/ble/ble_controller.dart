@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ffi';
-
 import 'package:plot_ble/models/ble_sys_device.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:plot_ble/services/ble/ble_uuids.dart';
@@ -24,6 +22,11 @@ BleRepository bleRepository(Ref ref) {
 class BleController extends _$BleController {
   StreamSubscription<BleConnectionState>? _connectionSubscription;
 
+  SysBleDevice? _lastDevice;
+  bool _isConnecting = false;
+  bool get isConnecting => _isConnecting;
+  bool get hasLastDevice => _lastDevice != null;
+
   @override
   SysBleDevice? build() {
     ref.onDispose(() {
@@ -33,7 +36,12 @@ class BleController extends _$BleController {
   }
 
   Future<void> connect(SysBleDevice device) async {
+    if (_isConnecting) return;
+
     final repository = ref.read(bleRepositoryProvider);
+    
+    _isConnecting = true;
+    _lastDevice = device;
 
     try {
       await repository.connect(device.id);
@@ -42,7 +50,14 @@ class BleController extends _$BleController {
     } catch (e) {
       state = null;
       rethrow;
+    }finally {
+      _isConnecting = false;
     }
+  }
+
+  Future<void> reconnect() async {
+    if (_lastDevice == null || _isConnecting) return;
+    await connect(_lastDevice!);
   }
 
   void _listenToConnectionChanges(SysBleDevice device) {
@@ -79,7 +94,7 @@ class BleController extends _$BleController {
         );
   }
 
-  Future<bool> getLedState() async {
+  Future<bool> getLed() async {
     final device = _ensureConnected();
     return await ref
         .read(bleRepositoryProvider)
@@ -111,6 +126,18 @@ class BleController extends _$BleController {
           BleUUIDs.CONTROL_UUID,
           BleUUIDs.H_UUID,
           h,
+        );
+  }
+
+  Future<void> setOK(bool ok) {
+    final device = _ensureConnected();
+    return ref
+        .read(bleRepositoryProvider)
+        .writeOnCaracteristic<bool>(
+          device.id,
+          BleUUIDs.CONTROL_UUID,
+          BleUUIDs.OK_UUID,
+          ok,
         );
   }
 
@@ -163,6 +190,7 @@ class SineGraphData extends _$SineGraphData {
   late SysBleDevice? _device;
 
   final List<StreamSubscription> _subscriptions = [];
+  bool get isListening => _subscriptions.isNotEmpty;
   Timer? _renderTimer;
 
   // Janela móvel de plotagem.
