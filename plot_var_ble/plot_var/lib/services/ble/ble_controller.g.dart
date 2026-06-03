@@ -82,7 +82,7 @@ final class BleControllerProvider
   }
 }
 
-String _$bleControllerHash() => r'540675f5115c9fffcb966747f198dc6b001347c9';
+String _$bleControllerHash() => r'e39f3a155a94938fcb8f16c0c250e3ad64c78294';
 
 abstract class _$BleController extends $Notifier<SysBleDevice?> {
   SysBleDevice? build();
@@ -193,30 +193,30 @@ abstract class _$BleScanner extends $StreamNotifier<List<SysBleDevice>> {
 
 /// Controladora de streaming de dados em tempo real para o grafico.
 
-@ProviderFor(SineGraphData)
-final sineGraphDataProvider = SineGraphDataProvider._();
+@ProviderFor(GraphData)
+final graphDataProvider = GraphDataProvider._();
 
 /// Controladora de streaming de dados em tempo real para o grafico.
-final class SineGraphDataProvider
-    extends $NotifierProvider<SineGraphData, Map<String, List<FlSpot>>> {
+final class GraphDataProvider
+    extends $NotifierProvider<GraphData, Map<String, List<FlSpot>>> {
   /// Controladora de streaming de dados em tempo real para o grafico.
-  SineGraphDataProvider._()
+  GraphDataProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'sineGraphDataProvider',
+        name: r'graphDataProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$sineGraphDataHash();
+  String debugGetCreateSourceHash() => _$graphDataHash();
 
   @$internal
   @override
-  SineGraphData create() => SineGraphData();
+  GraphData create() => GraphData();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(Map<String, List<FlSpot>> value) {
@@ -227,11 +227,11 @@ final class SineGraphDataProvider
   }
 }
 
-String _$sineGraphDataHash() => r'5d29e323c43757384eecf4f965b2dc3b79434172';
+String _$graphDataHash() => r'70e6b63aafcded1315c12f4eb13111f9526a8d3a';
 
 /// Controladora de streaming de dados em tempo real para o grafico.
 
-abstract class _$SineGraphData extends $Notifier<Map<String, List<FlSpot>>> {
+abstract class _$GraphData extends $Notifier<Map<String, List<FlSpot>>> {
   Map<String, List<FlSpot>> build();
   @$mustCallSuper
   @override

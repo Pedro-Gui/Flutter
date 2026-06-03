@@ -7,7 +7,7 @@ class SysSpinner<T extends num> extends StatefulWidget {
   final T step;
   final ValueChanged<T> onSubmitted;
   final String? title;
-  
+
   /// 0 = Nenhum botão
   /// 1 = Apenas Remover (-) e Adicionar (+)
   /// 2 = Todos os botões (Início, -, +, Fim)
@@ -35,7 +35,7 @@ class _SysSpinnerState<T extends num> extends State<SysSpinner<T>> {
   void initState() {
     super.initState();
     _value = widget.value;
-    _controller = TextEditingController(text: _value.toString());
+    _controller = TextEditingController(text: _formatValue(_value));
   }
 
   @override
@@ -43,7 +43,7 @@ class _SysSpinnerState<T extends num> extends State<SysSpinner<T>> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
       _value = widget.value;
-      _controller.text = _value.toString();
+      _controller.text = _formatValue(_value);
     }
   }
 
@@ -57,6 +57,28 @@ class _SysSpinnerState<T extends num> extends State<SysSpinner<T>> {
     if (T == int) return int.tryParse(text) as T?;
     if (T == double) return double.tryParse(text) as T?;
     return num.tryParse(text) as T?;
+  }
+
+  String _formatValue(T val) {
+    if (T == int) {
+      return val.toInt().toString();
+    }
+    return val.toDouble().toStringAsFixed(2);
+  }
+
+  void _updateValue(num rawValue) {
+    final num clamped = rawValue.clamp(widget.step, widget.maxValue);
+    
+    final T finalValue = (T == int ? clamped.toInt() : clamped.toDouble()) as T;
+
+    setState(() {
+      _value = finalValue;
+      final newText = _formatValue(_value);
+      if (_controller.text != newText) {
+      _controller.text = newText;
+    }
+    });
+    widget.onSubmitted(finalValue);
   }
 
   @override
@@ -78,57 +100,56 @@ class _SysSpinnerState<T extends num> extends State<SysSpinner<T>> {
             IconButton(
               icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
               color: theme.colorScheme.primary,
-              onPressed: () => widget.onSubmitted(widget.step),
+              onPressed: () => _updateValue(widget.step),
             ),
-            
+
           // Botão: Subtrair Step
           if (widget.showAllButton >= 1)
             IconButton(
               icon: const Icon(Icons.remove),
               color: theme.colorScheme.primary,
-              onPressed: () => widget.onSubmitted((_value - widget.step) as T),
+              onPressed: () {
+                _updateValue((_value - widget.step) as T);
+              },
             ),
 
           // Campo de Texto
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _controller,
-            builder: (context, textValue, _) {
-              return ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 60),
-                child: IntrinsicWidth(
-                  child: TextField(
-                    controller: _controller,
-                    textAlign: TextAlign.center,
-                    // Habilita ponto/vírgula no teclado se o tipo genérico for double
-                    keyboardType: TextInputType.numberWithOptions(decimal: T == double),
-                    maxLines: 1,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 8.0,
-                      ),
-                    ),
-                    onEditingComplete: () {
-                      FocusScope.of(context).unfocus();
-                      widget.onSubmitted(_parseValue(_controller.text) ?? widget.step);
-                    },
-                    onChanged: (val) {
-                      final T? aux = _parseValue(val);
-                      widget.onSubmitted(aux ?? widget.step);
-                      setState(() {
-                        _value = aux ?? _value;
-                      });
-                    },
-                    onSubmitted: (val) => widget.onSubmitted(_parseValue(val) ?? widget.step),
-                  ),
+          SizedBox(
+            width: 70,
+            child: TextField(
+              controller: _controller,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.numberWithOptions(
+                decimal: T == double,
+              ),
+              maxLines: 1,
+              enableSuggestions: false,
+              autocorrect: false,
+              style: TextStyle(color: theme.colorScheme.onSurface),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 8.0,
                 ),
-              );
-            },
+              ),
+              onEditingComplete: () {
+                FocusScope.of(context).unfocus();
+                _updateValue(
+                  _parseValue(_controller.text) ?? widget.step,
+                );
+              },
+              /* onChanged: (val) {
+                    final T? aux = _parseValue(val);
+                    _updateValue(aux ?? widget.step);
+                    setState(() {
+                      _value = aux ?? _value;
+                    });
+                  }, */
+              onSubmitted: (val) =>
+                  _updateValue(_parseValue(val) ?? widget.step),
+            ),
           ),
 
           // Botão: Adicionar Step
@@ -138,7 +159,7 @@ class _SysSpinnerState<T extends num> extends State<SysSpinner<T>> {
               color: theme.colorScheme.primary,
               onPressed: () => widget.onSubmitted((_value + widget.step) as T),
             ),
-            
+
           // Botão: Ir para o Máximo
           if (widget.showAllButton == 2)
             IconButton(
@@ -159,7 +180,7 @@ class _SysSpinnerState<T extends num> extends State<SysSpinner<T>> {
             padding: const EdgeInsets.only(left: 4.0, bottom: 6.0),
             child: Text(
               widget.title!,
-              style: theme.textTheme.labelMedium?.copyWith(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
               ),

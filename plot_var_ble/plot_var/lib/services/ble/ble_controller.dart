@@ -30,6 +30,7 @@ class BleController extends _$BleController {
   @override
   SysBleDevice? build() {
     ref.onDispose(() {
+      disconnect();
       _connectionSubscription?.cancel();
     });
     return null;
@@ -39,7 +40,7 @@ class BleController extends _$BleController {
     if (_isConnecting) return;
 
     final repository = ref.read(bleRepositoryProvider);
-    
+
     _isConnecting = true;
     _lastDevice = device;
 
@@ -50,7 +51,7 @@ class BleController extends _$BleController {
     } catch (e) {
       state = null;
       rethrow;
-    }finally {
+    } finally {
       _isConnecting = false;
     }
   }
@@ -83,62 +84,18 @@ class BleController extends _$BleController {
     state = null;
   }
 
-  Future<double> getH() async {
+  Future<T> readCarac<T>(String serviceId, String characteristicId) async {
     final device = _ensureConnected();
     return await ref
         .read(bleRepositoryProvider)
-        .readCharacteristic<double>(
-          device.id,
-          BleUUIDs.CONTROL_UUID,
-          BleUUIDs.H_UUID,
-        );
+        .readCharacteristic<T>(device.id, serviceId, characteristicId);
   }
 
-  Future<bool> getLed() async {
-    final device = _ensureConnected();
-    return await ref
-        .read(bleRepositoryProvider)
-        .readCharacteristic<bool>(
-          device.id,
-          BleUUIDs.LED_ACTUATOR_UUID,
-          BleUUIDs.LED_CARAC_UUID,
-        );
-  }
-
-  Future<void> setLed(bool turnOn) async {
-    final device = _ensureConnected();
-    await ref
-        .read(bleRepositoryProvider)
-        .writeOnCaracteristic<bool>(
-          device.id,
-          BleUUIDs.LED_ACTUATOR_UUID,
-          BleUUIDs.LED_CARAC_UUID,
-          turnOn,
-        );
-  }
-
-  Future<void> setH(double h) {
+  Future<void> setCarac<T>(String serviceId, String characteristicId, T value) {
     final device = _ensureConnected();
     return ref
         .read(bleRepositoryProvider)
-        .writeOnCaracteristic<double>(
-          device.id,
-          BleUUIDs.CONTROL_UUID,
-          BleUUIDs.H_UUID,
-          h,
-        );
-  }
-
-  Future<void> setOK(bool ok) {
-    final device = _ensureConnected();
-    return ref
-        .read(bleRepositoryProvider)
-        .writeOnCaracteristic<bool>(
-          device.id,
-          BleUUIDs.CONTROL_UUID,
-          BleUUIDs.OK_UUID,
-          ok,
-        );
+        .writeOnCaracteristic<T>(device.id, serviceId, characteristicId, value);
   }
 
   SysBleDevice _ensureConnected() {
@@ -185,14 +142,12 @@ class BleScanner extends _$BleScanner {
 
 /// Controladora de streaming de dados em tempo real para o grafico.
 @riverpod
-class SineGraphData extends _$SineGraphData {
+class GraphData extends _$GraphData {
   late BleRepository _repository;
   late SysBleDevice? _device;
 
   final List<StreamSubscription> _subscriptions = [];
   bool get isListening => _subscriptions.isNotEmpty;
-  Timer? _renderTimer;
-
   // Janela móvel de plotagem.
   int _windowSize = 500;
   int get windowSize => _windowSize;
@@ -226,12 +181,6 @@ class SineGraphData extends _$SineGraphData {
     if (_device == null) return;
     await stop();
 
-    _renderTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
-      if (ref.mounted) {
-        state = _getVisibleWindow();
-      }
-    });
-
     final deviceId = _device!.id;
 
     await _enableNotifications(deviceId, true);
@@ -245,6 +194,7 @@ class SineGraphData extends _$SineGraphData {
           )
           .listen((val) {
             _processSample(t: val);
+            state = _getVisibleWindow();
           }),
     );
 
@@ -336,9 +286,6 @@ class SineGraphData extends _$SineGraphData {
   }
 
   Future<void> stop() async {
-    _renderTimer?.cancel();
-    _renderTimer = null;
-
     if (_device != null) {
       try {
         await _enableNotifications(_device!.id, false);
@@ -349,6 +296,7 @@ class SineGraphData extends _$SineGraphData {
       await sub.cancel();
     }
     _subscriptions.clear();
+    setWindowSize(_windowSize); // para atualizar o estado
   }
 
   Future<void> _enableNotifications(String deviceId, bool enable) async {

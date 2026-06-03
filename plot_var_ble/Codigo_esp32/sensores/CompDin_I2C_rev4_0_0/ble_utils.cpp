@@ -49,35 +49,36 @@ class MyServerCallbacks : public BLEServerCallbacks {
 
 template<typename T>  // polimorfismo usando T
 class controlCallbacks : public BLECharacteristicCallbacks {
-    private:
-      T* targetPtr;
+private:
+  T* targetPtr;
 
-    public:
-      controlCallbacks(T* ptr): targetPtr(ptr) {}
+public:
+  controlCallbacks(T* ptr)
+    : targetPtr(ptr) {}
 
-      void onWrite(BLECharacteristic* characteristic) override {
-        uint8_t* rxData = characteristic->getData();
-        size_t rxLength = characteristic->getLength();
-        if (rxLength == sizeof(T)) {
-          T newVal;
-          memcpy(&newVal, rxData, sizeof(T));
+  void onWrite(BLECharacteristic* characteristic) override {
+    uint8_t* rxData = characteristic->getData();
+    size_t rxLength = characteristic->getLength();
+    if (rxLength == sizeof(T)) {
+      T newVal;
+      memcpy(&newVal, rxData, sizeof(T));
 
-          if (targetPtr != nullptr) {
-            *targetPtr = newVal;
-          }
-
-          Serial.println("*********");
-          Serial.print("Novo valor recebido: ");
-          Serial.println(*targetPtr);
-          Serial.println("*********");
-        } else {
-          Serial.println("*********");
-          Serial.println("Novo valor não reconhecido ");
-          Serial.println("*********");
-          characteristic->setValue((uint8_t*)targetPtr, sizeof(T));
-        }
+      if (targetPtr != nullptr) {
+        *targetPtr = newVal;
       }
-  };
+
+      Serial.println("*********");
+      Serial.print("Novo valor recebido: ");
+      Serial.println(*targetPtr);
+      Serial.println("*********");
+    } else {
+      Serial.println("*********");
+      Serial.println("Novo valor não reconhecido ");
+      Serial.println("*********");
+      characteristic->setValue((uint8_t*)targetPtr, sizeof(T));
+    }
+  }
+};
 
 class ledCallbacks : public BLECharacteristicCallbacks {
 public:
@@ -147,27 +148,27 @@ void initBluetooth(double* p_h, unsigned int* p_m, double* p_b, double* p_a, boo
     sampleService,
     T_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY,
-    "Time");
+    "Tempo T");
   TX_YK = createMyCharacteristic(
     sampleService,
     YK_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY,
-    "Sinal de entrada");
+    "Sinal de entrada YK");
   TX_YC = createMyCharacteristic(
     sampleService,
     YC_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY,
-    "Sinal compensado");
+    "Sinal compensado YC");
   TX_YF = createMyCharacteristic(
     sampleService,
     YF_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY,
-    "Sinal compensado filtrado");
+    "Sinal compensado filtrado YF");
   TX_YA = createMyCharacteristic(
     sampleService,
     YA_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY,
-    "Sinal amostrado decimado");
+    "Sinal amostrado decimado YA");
   sampleService->start();
 
   // === SERVIÇO 2: Controle de Variaveis de Processo ===
@@ -222,7 +223,7 @@ void initBluetooth(double* p_h, unsigned int* p_m, double* p_b, double* p_a, boo
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE,
     "LED SWITCH",
     new ledCallbacks());
-  bool currentStatus = (digitalRead(LED_BUILTIN) == LOW) ? true : false; //Normalmente ligado
+  bool currentStatus = (digitalRead(LED_BUILTIN) == LOW) ? true : false;  //Normalmente ligado
   RX_LED->setValue((uint8_t*)&currentStatus, sizeof(bool));
   ledService->start();
 
@@ -273,7 +274,7 @@ void gerenciarReconexaoBluetooth() {
   }
 }
 
-void sync_updateOK(bool updateOK){
+void sync_updateOK(bool updateOK) {
   *ptr_updateOk = updateOK;
   RX_OK->setValue((uint8_t*)ptr_updateOk, sizeof(bool));
 }

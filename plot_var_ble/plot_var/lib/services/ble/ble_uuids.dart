@@ -19,6 +19,41 @@ abstract class BleUUIDs {
   static const String OK_UUID = '20000005-1fb5-459e-8fcc-c5c9c331914b';
 
   // SERVIÇO 3: Atuadores (LED)
-  static const String LED_ACTUATOR_UUID = '30000000-1fb5-459e-8fcc-c5c9c331914b';
+  static const String LED_ACTUATOR_UUID ='30000000-1fb5-459e-8fcc-c5c9c331914b';
   static const String LED_CARAC_UUID = '30000001-1fb5-459e-8fcc-c5c9c331914b';
+
+  static String getDescriptor(String uuid) {
+    switch (uuid) {
+      case T_UUID:
+        return 'Tempo (ms)';
+      case YK_UUID:
+        return 'Sinal de entrada YK';
+      case YC_UUID:
+        return 'Sinal compensado YC';
+      case YF_UUID:
+        return 'Sinal compensado filtrado YF';
+      case YA_UUID:
+        return 'Sinal amostrado decimado YA';
+
+      case H_UUID:
+        return 'Intervalo de amostragem H';
+      case M_UUID:
+        return 'Fator de decimação M';
+      case B_UUID:
+        return 'Constante de tempo a ser compensada B';
+      case A_UUID:
+        return 'Constante de tempo desejada A';
+      case OK_UUID:
+        return 'Semáforo controle de atualização';
+
+      case LED_CARAC_UUID:
+        return 'Estado do LED';
+
+
+      default:
+        return 'Desconhecido';
+    }
+  }
+
+
 }
